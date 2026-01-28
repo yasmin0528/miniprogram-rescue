@@ -1,0 +1,18 @@
+spring:
+  jpa:
+    show-sql: true
+  datasource:
+    url: jdbc:mysql://localhost:3306/rescue_api_dev?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=UTC
+    username: root
+    password: root
+  redis:
+    host: localhost
+    port: 6379
+
+server:
+  port: 8080
+
+logging:
+  level:
+    root: INFO
+    com.tongyi.rescue_api: DEBUG
