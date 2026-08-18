@@ -61,13 +61,13 @@ wechat:
   miniapp:
     configs:
       user:
-          appid: ${WECHAT_USER_APPID:}
-          secret: ${WECHAT_USER_SECRET:}
-          code2session-url: https://api.weixin.qq.com/sns/jscode2session
-        shifu:
-          appid: ${WECHAT_SHIFU_APPID:}
-          secret: ${WECHAT_SHIFU_SECRET:}
-          code2session-url: https://api.weixin.qq.com/sns/jscode2session
+        appid: ${WECHAT_USER_APPID:}
+        secret: ${WECHAT_USER_SECRET:}
+        code2session-url: https://api.weixin.qq.com/sns/jscode2session
+      shifu:
+        appid: ${WECHAT_SHIFU_APPID:}
+        secret: ${WECHAT_SHIFU_SECRET:}
+        code2session-url: https://api.weixin.qq.com/sns/jscode2session
 
 pay:
   wechat:
