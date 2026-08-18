@@ -15,10 +15,17 @@ import java.util.Map;
  */
 public class JwtUtil {
 
-    private static final String SECRET = "REDACTED_JWT_SECRET";
+    // Read JWT secret from environment variable `JWT_SECRET` or system property `JWT_SECRET`.
+    private static final String SECRET = System.getenv("JWT_SECRET") != null
+            ? System.getenv("JWT_SECRET")
+            : System.getProperty("JWT_SECRET", "");
+
     private static final long EXPIRATION = 7 * 24 * 60 * 60 * 1000L; // 7 days
 
     private static SecretKey getSigningKey() {
+        if (SECRET == null || SECRET.isEmpty()) {
+            throw new IllegalStateException("JWT secret is not configured. Set environment variable JWT_SECRET or system property JWT_SECRET.");
+        }
         return Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
     }
 
