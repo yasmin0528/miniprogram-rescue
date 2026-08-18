@@ -1,0 +1,723 @@
+<template>
+	<view class="page">
+		<view class="card">
+			<view class="user-row">
+				<image class="avatar" :src="avatarUrl" mode="aspectFill"></image>
+				<view class="user-info">
+					<text class="name">{{ isLogin ? masterName : '未登录' }}</text>
+					<text class="desc">{{ isLogin ? phone : '请先登录以接单' }}</text>
+				</view>
+			</view>
+
+			<view class="divider"></view>
+
+			<view v-if="!isLogin" class="actions">
+				<!-- 协议同意部分 -->
+				<view class="protocol-section">
+					<checkbox-group @change="handleAgreeChange">
+						<label class="agreement">
+							<checkbox value="agree" :checked="agreeProtocol" />
+						</label>
+						<text>我已阅读并同意</text>
+						<navigator url="/pages/settings/settings" class="link">《用户服务协议》</navigator>
+						<text>和</text>
+						<navigator url="/pages/settings/settings" class="link">《隐私政策》</navigator>
+					</checkbox-group>
+				</view>
+				<!-- 微信小程序：手机号一键登录 -->
+				<!-- #ifdef MP-WEIXIN -->
+				<button
+					class="btn btn-primary"
+					:disabled="loadingLogin || !agreeProtocol"
+					open-type="getPhoneNumber|agreePrivacyAuthorization"
+					@getphonenumber="handleGetPhoneNumber"
+					@agreeprivacyauthorization="handleAgreePrivacyAuthorization"
+				>
+					{{ loadingLogin ? '登录中...' : '手机号一键登录' }}
+				</button>
+				<!-- #endif -->
+			</view>
+
+			<view v-else class="actions">
+				<button class="btn btn-plain" @click="logout">退出登录</button>
+			</view>
+		</view>
+
+		<view class="wallet-card">
+			<view class="wallet-header">
+				<text class="wallet-title">钱包</text>
+				<text class="wallet-subtitle">满10元可提现</text>
+			</view>
+
+			<view class="wallet-balance-wrap">
+				<text class="wallet-balance">￥{{ isLogin ? balanceText : '--' }}</text>
+				<text class="wallet-balance-desc">{{ isLogin ? '可用余额' : '登录后可查看钱包余额' }}</text>
+				<text v-if="isLogin" class="wallet-balance-desc">冻结中：￥{{ freezeBalance.toFixed(2) }}</text>
+			</view>
+
+			<view class="wallet-actions">
+				<button
+					class="btn"
+					:class="canWithdraw ? 'btn-primary' : 'btn-disabled'"
+					:disabled="!canWithdraw || loadingWithdraw"
+					@click="handleWithdrawClick"
+				>
+					{{ withdrawButtonText }}
+				</button>
+			</view>
+
+			<view v-if="isLogin && reconcileList.length > 0" class="reconcile-section">
+				<view class="reconcile-head">
+					<text class="reconcile-title">最近提现记录</text>
+					<navigator url="/pages/withdraw-records/withdraw-records" class="reconcile-more">查看全部</navigator>
+				</view>
+				<view v-for="(item, idx) in reconcileList.slice(0, 5)" :key="idx" class="reconcile-row">
+					<text class="reconcile-left">{{ item.applyNo || item.applyTime || '提现记录' }}</text>
+					<text class="reconcile-right">{{ '-' + (Number(item.transferAmountYuan || 0)).toFixed(2) + ' ' + (item.status || '') }}</text>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { applyWithdraw, createWithdraw, getWithdrawReconcile, type WithdrawView } from '../../common/api.uts'
+
+	const avatarUrl = ref('/static/logo.png')
+	const isLogin = ref(false)
+	const masterName = ref('')
+	const phone = ref('')
+	const pendingNickname = ref('')
+	const isEditingNickname = ref(false)
+
+	const balance = ref(0.00)
+	const freezeBalance = ref(0.00)
+	const reconcileList = ref<WithdrawView[]>([])
+	const loadingWallet = ref(false)
+	const loadingWithdraw = ref(false)
+	const loadingLogin = ref(false)
+	const agreeProtocol = ref(false)
+
+	const STORAGE_KEY = 'master_auth_demo'
+	const PROFILE_DRAFT_KEY = 'master_profile_draft'
+
+	type AuthDemo = {
+		name: string
+		phone: string
+	}
+
+	type ProfileDraft = {
+		nickname?: string
+		avatarUrl?: string
+	}
+
+	const loadProfileDraft = () => {
+		const raw = uni.getStorageSync(PROFILE_DRAFT_KEY) as string
+		if (!raw) {
+			return
+		}
+		try {
+			const draft = JSON.parse(raw) as ProfileDraft
+			if (draft.nickname) {
+				pendingNickname.value = draft.nickname
+			}
+			if (draft.avatarUrl) {
+				avatarUrl.value = draft.avatarUrl
+			}
+		} catch (e) {
+			uni.removeStorageSync(PROFILE_DRAFT_KEY)
+		}
+	}
+
+	const saveProfileDraft = () => {
+		const draft: ProfileDraft = {
+			nickname: pendingNickname.value || '',
+			avatarUrl: avatarUrl.value || ''
+		}
+		uni.setStorageSync(PROFILE_DRAFT_KEY, JSON.stringify(draft))
+	}
+
+	const loadAuth = () => {
+		const raw = uni.getStorageSync(STORAGE_KEY) as string
+		if (!raw) {
+			isLogin.value = false
+			masterName.value = ''
+			phone.value = ''
+			loadProfileDraft()
+			return
+		}
+		try {
+			const data = JSON.parse(raw) as AuthDemo
+			isLogin.value = true
+			masterName.value = data.name
+			pendingNickname.value = data.name
+			phone.value = data.phone
+			saveProfileDraft()
+		} catch (e) {
+			uni.removeStorageSync(STORAGE_KEY)
+			isLogin.value = false
+			loadProfileDraft()
+		}
+	}
+
+
+	const fetchWallet = async () => {
+		if (!isLogin.value) {
+			return
+		}
+		if (loadingWallet.value) {
+			return
+		}
+		const masterId = uni.getStorageSync('master_user_id') as string
+		if (!masterId) {
+			return
+		}
+		loadingWallet.value = true
+		try {
+			const data = await getWithdrawReconcile(masterId)
+			balance.value = Number(data.availableBalanceYuan ?? 0)
+			freezeBalance.value = Number(data.freezeBalanceYuan ?? 0)
+			reconcileList.value = Array.isArray(data.list) ? data.list : []
+		} catch (err: any) {
+			uni.showToast({ title: err?.message ? String(err.message) : '获取钱包失败', icon: 'none' })
+		} finally {
+			loadingWallet.value = false
+		}
+	}
+
+	const balanceText = computed((): string => {
+		return balance.value.toFixed(2)
+	})
+
+	const canWithdraw = computed((): boolean => {
+		return isLogin.value && balance.value >= 10 && !loadingWithdraw.value
+	})
+
+	const withdrawButtonText = computed((): string => {
+		if (!isLogin.value) {
+			return '未登录不可提现'
+		}
+		if (loadingWithdraw.value) {
+			return '处理中...'
+		}
+		if (balance.value < 10) {
+			return '满10元可提现'
+		}
+		return '立即提现'
+	})
+
+	onShow(() => {
+		loadAuth()
+		if (isLogin.value) {
+			fetchWallet()
+		}
+	})
+
+	onMounted(() => {
+		uni.$on('wallet:refresh', () => {
+			if (isLogin.value) {
+				fetchWallet()
+			}
+		})
+	})
+
+	onUnmounted(() => {
+		uni.$off('wallet:refresh')
+	})
+
+
+	// #ifdef MP-WEIXIN
+	import { LOGIN_URL } from '../../common/api.uts'
+
+	type WxPhoneLoginResp = {
+		code?: number
+		message?: string
+		data?: {
+			token?: string
+			userId?: string
+			nickName?: string
+			phoneNumber?: string
+			clientType?: string
+		}
+	}
+
+	type WxPhoneLoginPayload = {
+		loginCode: string
+		phoneCode: string
+		clientType: string
+		nickName: string
+	}
+
+	const requestWxPhoneLogin = (payload: WxPhoneLoginPayload): Promise<WxPhoneLoginResp> => {
+		return new Promise((resolve, reject) => {
+			if (!LOGIN_URL) {
+				reject(new Error('请先在 pages/profile/profile.uvue 中配置 LOGIN_URL'))
+				return
+			}
+			uni.request({
+				url: LOGIN_URL,
+				method: 'POST',
+				data: payload,
+				success: (res) => {
+					resolve(res.data as WxPhoneLoginResp)
+				},
+				fail: (err) => {
+					reject(err as any)
+				}
+			})
+		})
+	}
+
+	const handleChooseAvatar = (e: any) => {
+		const tempPath = e?.detail?.avatarUrl ? String(e.detail.avatarUrl) : ''
+		if (!tempPath) {
+			return
+		}
+		avatarUrl.value = tempPath
+		saveProfileDraft()
+	}
+
+	const handleNicknameInput = (e: any) => {
+		const val = e?.detail?.value ? String(e.detail.value) : ''
+		pendingNickname.value = val.trim()
+	}
+
+	const startEditNickname = () => {
+		if (!isLogin.value) {
+			uni.showToast({ title: '请先登录', icon: 'none' })
+			return
+		}
+		isEditingNickname.value = true
+	}
+
+	const handleNicknameBlur = () => {
+		if (!isEditingNickname.value) {
+			return
+		}
+		const next = pendingNickname.value.trim()
+		if (!next) {
+			pendingNickname.value = masterName.value
+			isEditingNickname.value = false
+			return
+		}
+		masterName.value = next
+		saveProfileDraft()
+		const authData: AuthDemo = {
+			name: masterName.value,
+			phone: phone.value
+		}
+		uni.setStorageSync(STORAGE_KEY, JSON.stringify(authData))
+		isEditingNickname.value = false
+		uni.showToast({ title: '昵称已更新', icon: 'success' })
+	}
+
+	const handleAgreePrivacyAuthorization = () => {
+		// 用户同意隐私协议事件回调
+		console.log('[privacy] user agreed privacy authorization')
+	}
+
+	const handleAgreeChange = (e: any) => {
+		agreeProtocol.value = e.detail.value.includes('agree')
+	}
+
+	const handleGetPhoneNumber = async (e: any) => {
+		if (loadingLogin.value) {
+			return
+		}
+		loadingLogin.value = true
+		uni.showLoading({ title: '登录中...' })
+		try {
+			const detail = e?.detail
+			const phoneCode = detail?.code ? String(detail.code) : ''
+			if (!phoneCode) {
+				const msg = (detail && detail.errMsg) ? String(detail.errMsg) : '未获取到手机号授权码'
+				uni.showToast({ title: msg, icon: 'none' })
+				return
+			}
+
+			const loginRes = await uni.login({ provider: 'weixin' })
+			const loginCode = (loginRes as any).code as string
+			if (!loginCode) {
+				throw new Error('wx.login 未获取到 loginCode')
+			}
+
+			const resp = await requestWxPhoneLogin({
+				loginCode: loginCode,
+				phoneCode: phoneCode,
+				clientType: 'shifu',
+				nickName: '微信用户'
+			})
+
+			if (resp.code === 200 && resp.data) {
+				const loginData = resp.data
+				uni.setStorageSync('master_token', loginData.token)
+				if (loginData.userId) {
+					uni.setStorageSync('master_user_id', loginData.userId)
+				}
+
+				const finalName = loginData.nickName || '用户'
+				const finalPhone = loginData.phoneNumber || ''
+				const authData: AuthDemo = {
+					name: finalName,
+					phone: finalPhone
+				}
+				uni.setStorageSync(STORAGE_KEY, JSON.stringify(authData))
+
+				masterName.value = finalName
+				phone.value = finalPhone
+				isLogin.value = true
+				pendingNickname.value = finalName
+				saveProfileDraft()
+				fetchWallet()
+				console.log('[auth] login success, userId:', loginData.userId || '', 'nick:', finalName)
+				uni.$emit('auth:login', { userId: loginData.userId || '', name: finalName })
+				uni.showToast({ title: '登录成功', icon: 'success' })
+			} else {
+				uni.showToast({ title: resp.message || '登录失败', icon: 'none' })
+			}
+		} catch (err: any) {
+			let errText = ''
+			try {
+				errText = JSON.stringify(err)
+			} catch (e) {
+				errText = String(err)
+			}
+			console.error('登录异常:', err, errText)
+			const msg = err?.message ? String(err.message) : (errText || '网络异常')
+			uni.showToast({ title: msg, icon: 'none' })
+		} finally {
+			uni.hideLoading()
+			loadingLogin.value = false
+		}
+	}
+	// #endif
+
+	const logout = async () => {
+		uni.showModal({
+			title: '退出登录',
+			content: '确认退出当前账号？',
+			success: (res) => {
+				if (res.confirm) {
+					uni.clearStorageSync()
+					loadAuth()
+					balance.value = 0
+					uni.showToast({ title: '已退出', icon: 'success' })
+				}
+			}
+		})
+	}
+
+	const parseAmount = (val: string): number => {
+		if (!/^\d+(\.\d{1,2})?$/.test(val)) return 0
+		const num = Number(val)
+		if (isNaN(num)) return 0
+		return num
+	}
+
+	const handleWithdrawClick = () => {
+		if (!canWithdraw.value) {
+			return
+		}
+
+		const current = balance.value
+		uni.showModal({
+			title: '提现申请',
+			editable: true,
+			placeholderText: `请输入提现金额（可提￥${current.toFixed(2)}）`,
+			success: (res) => {
+				if (!res.confirm) {
+					return
+				}
+				const amount = parseAmount(String(res.content || '').trim())
+				if (amount <= 0) {
+					uni.showToast({ title: '请输入正确金额', icon: 'none' })
+					return
+				}
+				if (amount > balance.value) {
+					uni.showToast({ title: '提现金额不能大于余额', icon: 'none' })
+					return
+				}
+				requestWithdraw(amount)
+			}
+		})
+	}
+
+	const requestWithdraw = async (amount: number) => {
+		if (loadingWithdraw.value) {
+			return
+		}
+		const masterId = uni.getStorageSync('master_user_id') as string
+		if (!masterId) {
+			uni.showToast({ title: '请先登录', icon: 'none' })
+			return
+		}
+		loadingWithdraw.value = true
+		try {
+			const requestId = `${masterId}-${Date.now()}`
+			const created = await createWithdraw({
+				masterId,
+				amountYuan: amount,
+				accountId: masterId,
+				requestId
+			})
+			if (!created.applyNo) {
+				throw new Error('提现单创建失败，请稍后重试')
+			}
+
+			await applyWithdraw({
+				applyNo: created.applyNo
+			})
+			uni.showToast({ title: '提现申请已提交', icon: 'success' })
+			setTimeout(() => {
+				uni.showToast({ title: '处理中，请在记录中查看进度', icon: 'none' })
+			}, 400)
+			await fetchWallet()
+		} catch (err: any) {
+			const msg = err?.message ? String(err.message) : '提现申请失败'
+			uni.showToast({ title: msg, icon: 'none' })
+		} finally {
+			loadingWithdraw.value = false
+		}
+	}
+</script>
+
+<style>
+/* 基础布局 */
+.page {
+	padding: 40rpx;
+	background-color: #F5F7FA;
+	min-height: 100vh;
+}
+
+/* 个人信息卡片 */
+.card {
+	background: #FFFFFF;
+	border-radius: 24rpx;
+	padding: 48rpx;
+	box-shadow: 0 8rpx 32rpx rgba(0, 127, 255, 0.05);
+	border: 1rpx solid #E1E8ED;
+}
+
+.user-row {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.avatar-btn {
+	padding: 0;
+	margin: 0;
+	background: transparent;
+	line-height: 1;
+	border: none;
+}
+
+
+.avatar {
+	width: 120rpx;
+	height: 120rpx;
+	border-radius: 60rpx;
+	background: #F0F5F9;
+	border: 1rpx solid #E1E8ED;
+}
+
+.user-info {
+	margin-left: 32rpx;
+	flex: 1;
+}
+
+.name {
+	font-size: 40rpx;
+	font-weight: 600;
+	color: #1D1D1F;
+	letter-spacing: -0.5rpx;
+	display: block;
+}
+
+.nickname-input {
+	font-size: 40rpx;
+	font-weight: 600;
+	color: #1D1D1F;
+	letter-spacing: -0.5rpx;
+	height: 56rpx;
+	line-height: 56rpx;
+}
+
+.desc {
+	margin-top: 8rpx;
+	font-size: 26rpx;
+	color: #007fff;
+	font-weight: 500;
+	display: block;
+	letter-spacing: 0.5rpx;
+}
+
+.divider {
+	height: 1rpx;
+	background: #F0F5F9;
+	margin: 48rpx 0;
+}
+
+/* 操作区域 */
+.actions {
+	display: flex;
+	flex-direction: column;
+}
+
+.btn {
+	width: 100%;
+	height: 96rpx;
+	line-height: 96rpx;
+	border-radius: 12rpx;
+	font-size: 28rpx;
+	font-weight: 600;
+	margin: 0;
+	transition: all 0.2s;
+}
+
+.btn-primary {
+	background: #007fff;
+	color: #FFFFFF;
+	border: none;
+	box-shadow: 0 8rpx 20rpx rgba(0, 127, 255, 0.2);
+}
+
+.btn-plain {
+	background-color: #FFFFFF;
+	color: #007fff;
+	border: 1rpx solid #007fff;
+}
+
+.btn-disabled {
+	background-color: #E5E5EA;
+	color: #B0B0B5;
+	border: none;
+	box-shadow: none;
+}
+
+.btn:active {
+	opacity: 0.8;
+}
+
+/* 协议部分 */
+.protocol-section {
+	margin-top: 20rpx;
+	text-align: center;
+	color: #666;
+	margin-bottom: 20rpx;
+}
+
+.agreement {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 24rpx;
+}
+
+.agreement checkbox {
+	margin-right: 8rpx;
+}
+
+.link {
+	color: #007FFF;
+	text-decoration: underline;
+	margin: 0 4rpx;
+}
+
+/* 钱包卡片 */
+.wallet-card {
+	margin-top: 32rpx;
+	background: #FFFFFF;
+	border-radius: 24rpx;
+	padding: 40rpx;
+	box-shadow: 0 8rpx 32rpx rgba(0, 127, 255, 0.05);
+	border: 1rpx solid #E1E8ED;
+}
+
+.reconcile-section {
+	margin-top: 28rpx;
+	border-top: 1rpx solid #F0F5F9;
+	padding-top: 20rpx;
+}
+
+.reconcile-head {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12rpx;
+}
+
+.reconcile-title {
+	font-size: 24rpx;
+	color: #8E8E93;
+	display: block;
+}
+
+.reconcile-more {
+	font-size: 24rpx;
+	color: #007fff;
+	font-weight: 600;
+}
+
+.reconcile-row {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	padding: 10rpx 0;
+}
+
+.reconcile-left {
+	font-size: 24rpx;
+	color: #1D1D1F;
+	max-width: 70%;
+}
+
+.reconcile-right {
+	font-size: 24rpx;
+	font-weight: 600;
+	color: #007fff;
+}
+
+.wallet-header {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 32rpx;
+}
+
+.wallet-title {
+	font-size: 32rpx;
+	font-weight: 600;
+	color: #1D1D1F;
+}
+
+.wallet-subtitle {
+	font-size: 24rpx;
+	color: #8E8E93;
+}
+
+.wallet-balance-wrap {
+	align-items: center;
+	text-align: center;
+	margin-bottom: 32rpx;
+}
+
+.wallet-balance {
+	font-size: 48rpx;
+	font-weight: 700;
+	color: #1D1D1F;
+}
+
+.wallet-balance-desc {
+	margin-top: 8rpx;
+	font-size: 24rpx;
+	color: #8E8E93;
+}
+
+.wallet-actions {
+}
+
+</style>

@@ -1,0 +1,210 @@
+@import "../../uvue.wxss";
+:host{display:flex;flex-direction:column}
+
+/* 基础布局 */
+.page {
+	padding: 40rpx;
+	background-color: #F5F7FA;
+	min-height: 100vh;
+}
+
+/* 个人信息卡片 */
+.card {
+	background: #FFFFFF;
+	border-radius: 24rpx;
+	padding: 48rpx;
+	box-shadow: 0 8rpx 32rpx rgba(0, 127, 255, 0.05);
+	border: 1rpx solid #E1E8ED;
+}
+.user-row {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+.avatar-btn {
+	padding: 0;
+	margin: 0;
+	background: transparent;
+	line-height: 1;
+	border: none;
+}
+.avatar {
+	width: 120rpx;
+	height: 120rpx;
+	border-radius: 60rpx;
+	background: #F0F5F9;
+	border: 1rpx solid #E1E8ED;
+}
+.user-info {
+	margin-left: 32rpx;
+	flex: 1;
+}
+.name {
+	font-size: 40rpx;
+	font-weight: 600;
+	color: #1D1D1F;
+	letter-spacing: -0.5rpx;
+	display: block;
+}
+.nickname-input {
+	font-size: 40rpx;
+	font-weight: 600;
+	color: #1D1D1F;
+	letter-spacing: -0.5rpx;
+	height: 56rpx;
+	line-height: 56rpx;
+}
+.desc {
+	margin-top: 8rpx;
+	font-size: 26rpx;
+	color: #007fff;
+	font-weight: 500;
+	display: block;
+	letter-spacing: 0.5rpx;
+}
+.divider {
+	height: 1rpx;
+	background: #F0F5F9;
+	margin: 48rpx 0;
+}
+
+/* 操作区域 */
+.actions {
+	display: flex;
+	flex-direction: column;
+}
+.btn {
+	width: 100%;
+	height: 96rpx;
+	line-height: 96rpx;
+	border-radius: 12rpx;
+	font-size: 28rpx;
+	font-weight: 600;
+	margin: 0;
+	transition: all 0.2s;
+}
+.btn-primary {
+	background: #007fff;
+	color: #FFFFFF;
+	border: none;
+	box-shadow: 0 8rpx 20rpx rgba(0, 127, 255, 0.2);
+}
+.btn-plain {
+	background-color: #FFFFFF;
+	color: #007fff;
+	border: 1rpx solid #007fff;
+}
+.btn-disabled {
+	background-color: #E5E5EA;
+	color: #B0B0B5;
+	border: none;
+	box-shadow: none;
+}
+.btn:active {
+	opacity: 0.8;
+}
+
+/* 协议部分 */
+.protocol-section {
+	margin-top: 20rpx;
+	text-align: center;
+	color: #666;
+	margin-bottom: 20rpx;
+}
+.agreement {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 24rpx;
+}
+.agreement checkbox {
+	margin-right: 8rpx;
+}
+.link {
+	color: #007FFF;
+	text-decoration: underline;
+	margin: 0 4rpx;
+}
+
+/* 钱包卡片 */
+.wallet-card {
+	margin-top: 32rpx;
+	background: #FFFFFF;
+	border-radius: 24rpx;
+	padding: 40rpx;
+	box-shadow: 0 8rpx 32rpx rgba(0, 127, 255, 0.05);
+	border: 1rpx solid #E1E8ED;
+}
+.reconcile-section {
+	margin-top: 28rpx;
+	border-top: 1rpx solid #F0F5F9;
+	padding-top: 20rpx;
+}
+.reconcile-head {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12rpx;
+}
+.reconcile-title {
+	font-size: 24rpx;
+	color: #8E8E93;
+	display: block;
+}
+.reconcile-more {
+	font-size: 24rpx;
+	color: #007fff;
+	font-weight: 600;
+}
+.reconcile-row {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	padding: 10rpx 0;
+}
+.reconcile-left {
+	font-size: 24rpx;
+	color: #1D1D1F;
+	max-width: 70%;
+}
+.reconcile-right {
+	font-size: 24rpx;
+	font-weight: 600;
+	color: #007fff;
+}
+.wallet-header {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 32rpx;
+}
+.wallet-title {
+	font-size: 32rpx;
+	font-weight: 600;
+	color: #1D1D1F;
+}
+.wallet-subtitle {
+	font-size: 24rpx;
+	color: #8E8E93;
+}
+.wallet-balance-wrap {
+	align-items: center;
+	text-align: center;
+	margin-bottom: 32rpx;
+}
+.wallet-balance {
+	font-size: 48rpx;
+	font-weight: 700;
+	color: #1D1D1F;
+}
+.wallet-balance-desc {
+	margin-top: 8rpx;
+	font-size: 24rpx;
+	color: #8E8E93;
+}
+.wallet-actions {
+}
+

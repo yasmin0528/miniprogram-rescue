@@ -1,32 +1,39 @@
 package com.tongyi.rescue_api.domain.dto;
 
-import java.math.BigDecimal;
+import lombok.Data;
 
+import java.time.LocalDateTime;
+
+@Data
 public class OrderCreateDTO {
-    private String description;
-    private BigDecimal amount;
+    /** 服务商ID */
+    private String agencyId;
 
-    public OrderCreateDTO() {
-    }
+    private String customerId;
+    private String customerName;
+    private String customerPhone;
 
-    public OrderCreateDTO(String description, BigDecimal amount) {
-        this.description = description;
-        this.amount = amount;
-    }
+    /** 服务类型编码，如 tow/jump_start */
+    private String serviceType;
 
-    public String getDescription() {
-        return description;
-    }
+    /** 订单类型：1即刻单，2预约单 */
+    private Integer orderType;
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
+    /** 预约时间（预约单可传） */
+    private LocalDateTime appointmentTime;
 
-    public BigDecimal getAmount() {
-        return amount;
-    }
+    private String address;
+    private Double lat;
+    private Double lng;
+    private String plateNo;
+    private String remark;
 
-    public void setAmount(BigDecimal amount) {
-        this.amount = amount;
-    }
+    /** 是否服务商订单: 0否 1是 */
+    private Integer agencyOrderType;
+
+    /** 订单金额 */
+    private java.math.BigDecimal price;
+
+    /** 抽成 */
+    private java.math.BigDecimal ratio;
 }

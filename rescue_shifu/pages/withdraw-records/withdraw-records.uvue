@@ -1,0 +1,221 @@
+<template>
+	<view class="page">
+		<view class="card">
+			<view class="head">
+				<text class="title">提现记录</text>
+				<text class="subtitle">展示最近提现状态与失败原因</text>
+			</view>
+
+			<view class="filter-row">
+				<view class="filter-item" :class="filterStatus === '' ? 'active' : ''" @click="setFilter('')">全部</view>
+				<view class="filter-item" :class="filterStatus === 'APPLYING' ? 'active' : ''" @click="setFilter('APPLYING')">处理中</view>
+				<view class="filter-item" :class="filterStatus === 'SUCCESS' ? 'active' : ''" @click="setFilter('SUCCESS')">成功</view>
+				<view class="filter-item" :class="filterStatus === 'FAILED' ? 'active' : ''" @click="setFilter('FAILED')">失败</view>
+			</view>
+
+			<view v-if="loading" class="empty">加载中...</view>
+			<view v-else-if="filteredList.length === 0" class="empty">暂无提现记录</view>
+			<view v-else class="list">
+				<view v-for="(item, idx) in filteredList" :key="idx" class="row">
+					<view class="row-top">
+						<text class="apply-no">{{ item.applyNo || '-' }}</text>
+						<text class="status" :class="statusClass(item.status)">{{ statusText(item.status) }}</text>
+					</view>
+					<view class="row-mid">
+						<text class="amount">-￥{{ Number(item.transferAmountYuan || 0).toFixed(2) }}</text>
+						<text class="time">{{ item.applyTime || '-' }}</text>
+					</view>
+					<text v-if="item.failReason" class="reason">失败原因：{{ item.failReason }}</text>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { getWithdrawReconcile, type WithdrawView } from '../../common/api.uts'
+
+	const list = ref<WithdrawView[]>([])
+	const loading = ref(false)
+	const filterStatus = ref('')
+
+	const normalizedStatus = (status?: string): string => {
+		if (status === 'SUCCESS') return 'SUCCESS'
+		if (status === 'CLOSED' || status === 'ABNORMAL') return 'FAILED'
+		return 'APPLYING'
+	}
+
+	const statusText = (status?: string): string => {
+		const s = normalizedStatus(status)
+		if (s === 'SUCCESS') return '提现成功'
+		if (s === 'FAILED') return '提现失败'
+		return '处理中'
+	}
+
+	const statusClass = (status?: string): string => {
+		const s = normalizedStatus(status)
+		if (s === 'SUCCESS') return 'st-success'
+		if (s === 'FAILED') return 'st-failed'
+		return 'st-applying'
+	}
+
+	const filteredList = computed((): WithdrawView[] => {
+		if (!filterStatus.value) return list.value
+		return list.value.filter((it: WithdrawView) => normalizedStatus(it.status) === filterStatus.value)
+	})
+
+	const setFilter = (status: string) => {
+		filterStatus.value = status
+	}
+
+	const loadData = async () => {
+		const masterId = uni.getStorageSync('master_user_id') as string
+		if (!masterId) {
+			uni.showToast({ title: '请先登录', icon: 'none' })
+			return
+		}
+		loading.value = true
+		try {
+			const data = await getWithdrawReconcile(masterId)
+			list.value = Array.isArray(data.list) ? data.list : []
+		} catch (err: any) {
+			uni.showToast({ title: err?.message ? String(err.message) : '加载失败', icon: 'none' })
+		} finally {
+			loading.value = false
+		}
+	}
+
+	onShow(() => {
+		loadData()
+	})
+</script>
+
+<style>
+.page {
+	padding: 32rpx;
+	background: #F5F7FA;
+	min-height: 100vh;
+}
+
+.card {
+	background: #FFFFFF;
+	border-radius: 20rpx;
+	padding: 28rpx;
+	border: 1rpx solid #E1E8ED;
+}
+
+.head {
+	margin-bottom: 20rpx;
+}
+
+.title {
+	font-size: 34rpx;
+	font-weight: 700;
+	color: #1D1D1F;
+	display: block;
+}
+
+.subtitle {
+	font-size: 24rpx;
+	color: #8E8E93;
+	display: block;
+	margin-top: 8rpx;
+}
+
+.filter-row {
+	display: flex;
+	flex-direction: row;
+	gap: 16rpx;
+	margin-bottom: 24rpx;
+}
+
+.filter-item {
+	padding: 10rpx 22rpx;
+	border-radius: 999rpx;
+	background: #F0F5F9;
+	color: #666;
+	font-size: 24rpx;
+}
+
+.filter-item.active {
+	background: #007fff;
+	color: #fff;
+}
+
+.empty {
+	text-align: center;
+	padding: 48rpx 0;
+	font-size: 26rpx;
+	color: #8E8E93;
+}
+
+.list {
+	display: flex;
+	flex-direction: column;
+	gap: 16rpx;
+}
+
+.row {
+	border: 1rpx solid #EDF1F5;
+	border-radius: 14rpx;
+	padding: 20rpx;
+}
+
+.row-top,
+.row-mid {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.row-mid {
+	margin-top: 10rpx;
+}
+
+.apply-no {
+	font-size: 24rpx;
+	color: #333;
+	max-width: 70%;
+}
+
+.amount {
+	font-size: 30rpx;
+	font-weight: 700;
+	color: #1D1D1F;
+}
+
+.time {
+	font-size: 22rpx;
+	color: #8E8E93;
+}
+
+.status {
+	font-size: 22rpx;
+	font-weight: 600;
+	padding: 6rpx 14rpx;
+	border-radius: 999rpx;
+}
+
+.st-applying {
+	background: #EBF3FF;
+	color: #007fff;
+}
+
+.st-success {
+	background: #E8F8EE;
+	color: #1F9D55;
+}
+
+.st-failed {
+	background: #FDECEC;
+	color: #D93025;
+}
+
+.reason {
+	display: block;
+	margin-top: 10rpx;
+	font-size: 22rpx;
+	color: #D93025;
+}
+</style>

@@ -1,0 +1,357 @@
+export const API_CONFIG = {
+	baseURL: 'http://127.0.0.1:8080',
+	timeout: 10000
+}
+
+export const MAP_CONFIG = {
+	tencentKey: 'REDACTED_TENCENT_MAP_KEY'
+}
+
+export const LOGIN_URL = `${API_CONFIG.baseURL}/api/wechat/login`
+
+interface RequestOptions {
+	url: string
+	method?: string
+	data?: any
+	header?: any
+}
+
+const request = (options: RequestOptions): Promise<any> => {
+	return new Promise((resolve, reject) => {
+		const fullUrl = options.url.startsWith('http')
+			? options.url
+			: `${API_CONFIG.baseURL}${options.url}`
+		const token = uni.getStorageSync('master_token') as string
+
+		uni.request({
+			url: fullUrl,
+			method: options.method || 'GET',
+			data: options.data || {},
+			header: {
+				'content-type': 'application/json',
+				...(token ? { Authorization: `Bearer ${token}` } : {}),
+				...(options.header || {})
+			},
+			timeout: API_CONFIG.timeout,
+			success: (res) => {
+				if (res.statusCode === 200) {
+					resolve(res.data)
+				} else {
+					reject(new Error(`请求失败: ${res.statusCode}`))
+				}
+			},
+			fail: (err) => {
+				reject(err)
+			}
+		})
+	})
+}
+
+const isApiSuccess = (res: any): boolean => {
+	if (res?.success === true) return true
+	const code = String(res?.code ?? '')
+	return code === '200' || code === '00000'
+}
+
+const apiMessage = (res: any, fallback: string): string => {
+	const msg = res?.message || res?.msg
+	return msg ? String(msg) : fallback
+}
+
+const unwrapData = <T>(res: any, fallback: string): T => {
+	if (isApiSuccess(res)) {
+		return (res?.data || {}) as T
+	}
+	const err: any = new Error(apiMessage(res, fallback))
+	err.code = res?.code
+	throw err
+}
+
+export type ShifuHallOrderRaw = {
+	id: string
+	address?: string
+	agencyId?: string
+	agencyOrderType?: number
+	appointmentTime?: string
+	customerId?: string
+	customerName?: string
+	customerPhone?: string
+	isDeleted?: number
+	lat?: number
+	lng?: number
+	orderNo?: string
+	orderType?: number
+	plateNo?: string
+	price?: number
+	ratio?: number
+	remark?: string
+	serviceType?: string
+	status?: string
+	createTime?: string
+	netPrice?: number
+	masterIncomeAmount?: number
+	providerIncomeAmount?: number
+	isDispatch?: number
+	dispatchId?: string
+	dispatchToken?: string
+	settlementStatus?: string
+	orderReceivingId?: string
+}
+
+export type ShifuHallOrderItem = {
+	order: ShifuHallOrderRaw
+	netPrice?: number
+}
+
+interface ShifuHallOrdersParams {
+	userId: string
+	lat: number
+	lng: number
+	radiusKm?: number
+	visibleStatuses?: string
+	excludeStatus?: string
+}
+
+export const getShifuHallOrders = (params: ShifuHallOrdersParams): Promise<ShifuHallOrderItem[]> => {
+	return request({
+		url: '/api/shifu/orders/hall',
+		method: 'GET',
+		data: params
+	}).then((res: any) => {
+		const data = unwrapData<any[]>(res, '加载订单列表失败')
+		if (!Array.isArray(data)) {
+			throw new Error('加载订单列表失败')
+		}
+		return data.map((it: any) => {
+			return {
+				order: it?.order as ShifuHallOrderRaw,
+				netPrice: it?.netPrice != null ? Number(it.netPrice) : undefined
+			} as ShifuHallOrderItem
+		})
+	})
+}
+
+export type OrderDetailRaw = ShifuHallOrderRaw
+
+export type OrderDetailResp = {
+	order: OrderDetailRaw
+	netPrice?: number
+}
+
+export const getOrderDetail = (orderId: string): Promise<OrderDetailResp> => {
+	return request({
+		url: '/api/shifu/orders/detail',
+		method: 'GET',
+		data: { orderId }
+	}).then((res: any) => {
+		const data = unwrapData<any>(res, '加载订单详情失败')
+		if (!data?.order) {
+			throw new Error('加载订单详情失败')
+		}
+		return {
+			order: data.order as OrderDetailRaw,
+			netPrice: data.netPrice != null ? Number(data.netPrice) : undefined
+		} as OrderDetailResp
+	})
+}
+
+interface OrderListParams {
+	operatorId: string
+}
+
+export type OrderListItem = {
+	order: ShifuHallOrderRaw
+	netPrice?: number
+}
+
+export const getOrderList = (params: OrderListParams): Promise<OrderListItem[]> => {
+	return request({
+		url: '/api/order/list',
+		method: 'GET',
+		data: params
+	}).then((res: any) => {
+		const data = unwrapData<any[]>(res, '加载订单失败')
+		if (!Array.isArray(data)) {
+			throw new Error('加载订单失败')
+		}
+		return data.map((it: any) => {
+			return {
+				order: it?.order as ShifuHallOrderRaw,
+				netPrice: it?.netPrice != null ? Number(it.netPrice) : undefined
+			} as OrderListItem
+		})
+	})
+}
+
+interface AcceptOrderParams {
+	orderId: string
+	operatorId: string
+}
+
+export const acceptOrder = (params: AcceptOrderParams): Promise<OrderDetailRaw> => {
+	return request({
+		url: '/api/order/accept',
+		method: 'POST',
+		data: params
+	}).then((res: any) => {
+		return unwrapData<OrderDetailRaw>(res, '接单失败')
+	})
+}
+
+export type DispatchPreviewResp = {
+	orderId: string
+	orderNo?: string
+	serviceType?: string
+	address?: string
+	customerPhone?: string
+	masterIncomeAmount?: number
+	isDispatch?: number
+}
+
+export const createDispatch = (orderId: string, operatorId: string, commissionAmount: number): Promise<{ orderId: string; token: string; sharePath: string }> => {
+	return request({
+		url: '/api/order/dispatch/create',
+		method: 'POST',
+		data: { orderId, operatorId, commissionAmount }
+	}).then((res: any) => {
+		return unwrapData<{ orderId: string; token: string; sharePath: string }>(res, '创建派单失败')
+	})
+}
+
+export const getDispatchPreview = (token: string): Promise<DispatchPreviewResp> => {
+	return request({
+		url: '/api/order/dispatch/preview',
+		method: 'GET',
+		data: { token }
+	}).then((res: any) => {
+		return unwrapData<DispatchPreviewResp>(res, '加载派单预览失败')
+	})
+}
+
+export const acceptDispatch = (token: string, operatorId: string): Promise<OrderDetailRaw> => {
+	return request({
+		url: '/api/order/dispatch/accept',
+		method: 'POST',
+		data: { token, operatorId }
+	}).then((res: any) => {
+		return unwrapData<OrderDetailRaw>(res, '接收派单失败')
+	})
+}
+
+export const revokeDispatch = (orderId: string, operatorId: string): Promise<OrderDetailRaw> => {
+	return request({
+		url: '/api/order/dispatch/revoke',
+		method: 'POST',
+		data: { orderId, operatorId }
+	}).then((res: any) => {
+		return unwrapData<OrderDetailRaw>(res, '撤回派单失败')
+	})
+}
+
+export const completeOrder = (orderId: string, operatorId: string): Promise<OrderDetailRaw> => {
+	return request({
+		url: '/api/order/complete',
+		method: 'POST',
+		data: { orderId, operatorId }
+	}).then((res: any) => {
+		return unwrapData<OrderDetailRaw>(res, '完成订单失败')
+	})
+}
+
+interface UpdateOrderStatusParams {
+	orderId: string
+	status: string
+	operatorId: string
+}
+
+export const updateOrderStatus = (params: UpdateOrderStatusParams): Promise<OrderDetailRaw> => {
+	return request({
+		url: '/api/order/status',
+		method: 'POST',
+		data: params
+	}).then((res: any) => {
+		return unwrapData<OrderDetailRaw>(res, '更新状态失败')
+	})
+}
+
+export type WithdrawCreateParams = {
+	masterId: string
+	amountYuan: number
+	accountId: string
+	verifyCode?: string
+	requestId: string
+}
+
+export type WithdrawCreateResp = {
+	applyNo?: string
+	status?: string
+	transferAmountYuan?: number
+	feeYuan?: number
+	netAmountYuan?: number
+}
+
+export type WithdrawApplyParams = {
+	applyNo: string
+}
+
+export type WithdrawView = {
+	applyNo?: string
+	masterId?: string
+	bizOrderNo?: string
+	outBillNo?: string
+	transferBillNo?: string
+	status?: string
+	transferAmountFen?: number
+	transferAmountYuan?: number
+	openId?: string
+	applyTime?: string
+	successTime?: string
+	failReason?: string
+	notifyTime?: string
+}
+
+export type WithdrawReconcileResp = {
+	availableBalanceYuan?: number
+	freezeBalanceYuan?: number
+	list?: WithdrawView[]
+}
+
+export const createWithdraw = (params: WithdrawCreateParams): Promise<WithdrawCreateResp> => {
+	return request({
+		url: '/api/pay/withdraw/create',
+		method: 'POST',
+		data: params
+	}).then((res: any) => {
+		return unwrapData<WithdrawCreateResp>(res, '创建提现申请失败')
+	})
+}
+
+export const applyWithdraw = (params: WithdrawApplyParams): Promise<WithdrawView> => {
+	return request({
+		url: '/api/pay/withdraw/apply',
+		method: 'POST',
+		data: params
+	}).then((res: any) => {
+		return unwrapData<WithdrawView>(res, '发起提现失败')
+	})
+}
+
+export const getWithdrawRecord = (applyNo: string): Promise<WithdrawView> => {
+	return request({
+		url: '/api/pay/withdraw/record',
+		method: 'GET',
+		data: { applyNo }
+	}).then((res: any) => {
+		return unwrapData<WithdrawView>(res, '查询提现记录失败')
+	})
+}
+
+export const getWithdrawReconcile = (masterId: string): Promise<WithdrawReconcileResp> => {
+	return request({
+		url: '/api/pay/withdraw/reconcile',
+		method: 'GET',
+		data: { masterId }
+	}).then((res: any) => {
+		return unwrapData<WithdrawReconcileResp>(res, '查询钱包对账失败')
+	})
+}

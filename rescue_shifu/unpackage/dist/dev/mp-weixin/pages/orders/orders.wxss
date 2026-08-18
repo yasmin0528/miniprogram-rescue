@@ -1,0 +1,245 @@
+@import "../../uvue.wxss";
+:host{display:flex;flex-direction:column}
+
+.page {
+		background-color: #F5F5F7;
+		min-height: 100vh;
+}
+
+	/* 顶部 TabBar 样式 */
+.tabs {
+		display: flex;
+		flex-direction: row;
+		background-color: #FFFFFF;
+		height: 100rpx;
+		align-items: center;
+		position: -webkit-sticky;
+		position: sticky;
+		top: 0;
+		z-index: 10;
+		border-bottom: 1rpx solid #E1E8ED;
+}
+.tab {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		height: 100%;
+		position: relative;
+}
+.tab-text {
+		font-size: 28rpx;
+		color: #86868B;
+		transition: all 0.2s ease;
+}
+.tab.active .tab-text {
+		color: #007fff;
+		font-weight: 600;
+}
+.tab-line {
+		position: absolute;
+		bottom: 0;
+		width: 48rpx;
+		height: 4rpx;
+		background-color: #007fff;
+		border-radius: 2rpx;
+}
+
+	/* 列表容器 */
+.list {
+		padding: 32rpx;
+		height: calc(100vh - 100rpx);
+}
+
+	/* 订单卡片样式 */
+.card {
+		background-color: #FFFFFF;
+		border-radius: 12rpx;
+		padding: 32rpx;
+		margin-bottom: 32rpx;
+		border: 1rpx solid #E1E8ED;
+		position: relative;
+		overflow: hidden;
+}
+.card-header {
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 32rpx;
+		padding-right: 140rpx;
+}
+.service-title {
+		font-size: 32rpx;
+		font-weight: 600;
+		color: #1D1D1F;
+}
+.status-tag {
+		position: absolute;
+		top: 0;
+		right: 0;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		padding: 12rpx 24rpx;
+		border-bottom-left-radius: 12rpx;
+		font-size: 22rpx;
+		font-weight: 600;
+		letter-spacing: 0.5px;
+}
+
+
+	/* 状态颜色区分 - 参考 Eisenhower 规范 */
+.st-processing {
+		background-color: #EBF3FF;
+		color: #007fff;
+}
+.st-done {
+		background-color: #E6F7ED;
+		color: #2ecc71;
+}
+.st-new {
+		background-color: #FFF9E6;
+		color: #ffbe0b;
+}
+
+	/* 卡片内容区域 */
+.card-body {
+		display: flex;
+		flex-direction: column;
+		gap: 20rpx;
+}
+.info-item {
+		display: flex;
+		flex-direction: row;
+		line-height: 1.5;
+}
+.info-label {
+		font-size: 26rpx;
+		color: #86868B;
+		width: 160rpx;
+		flex-shrink: 0;
+}
+.info-value {
+		font-size: 26rpx;
+		color: #1D1D1F;
+}
+.link {
+		text-decoration: none;
+}
+.highlight-blue {
+		color: #007fff;
+		font-weight: 600;
+}
+.price-highlight {
+		color: #fb5607;
+		font-weight: 700;
+		font-size: 32rpx;
+}
+
+	/* 底部按钮区域 */
+.card-footer {
+		display: flex;
+		flex-direction: row;
+		justify-content: flex-end;
+		gap: 24rpx;
+		margin-top: 32rpx;
+		padding-top: 32rpx;
+		border-top: 1rpx solid #F0F5F9;
+}
+.btn {
+		min-width: 176rpx;
+		height: 72rpx;
+		line-height: 72rpx;
+		text-align: center;
+		border-radius: 8rpx;
+		font-size: 26rpx;
+		margin: 0;
+		padding: 0 32rpx;
+		font-weight: 600;
+}
+.btn-detail {
+		background-color: #FFFFFF;
+		color: #007fff;
+		border: 1rpx solid #007fff;
+}
+.btn-dispatch {
+		background-color: #007fff;
+		color: #FFFFFF;
+		border: none;
+		box-shadow: 0 4rpx 12rpx rgba(0, 127, 255, 0.2);
+}
+.btn-revoke {
+		background-color: #FFFFFF;
+		color: #ff0000;
+		border: 1rpx solid #ff0000;
+}
+
+	/* 派单详情信息 */
+.dispatch-info {
+		margin-top: 24rpx;
+		padding: 20rpx 24rpx;
+		background-color: #F5F7FA;
+		border-radius: 8rpx;
+		display: flex;
+		flex-direction: row;
+		border: 1rpx solid #E1E8ED;
+}
+.dispatch-label {
+		font-size: 24rpx;
+		color: #86868B;
+}
+.dispatch-value {
+		font-size: 24rpx;
+		color: #007fff;
+		font-weight: 600;
+}
+.empty {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		padding-top: 240rpx;
+}
+.empty-text {
+		color: #86868B;
+		font-size: 28rpx;
+}
+
+	/* 全屏分享引导遮罩 */
+.hidden-share-btn {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.6);
+		z-index: 100;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: none;
+		padding: 0;
+		margin: 0;
+		border-radius: 12rpx;
+}
+.share-mask-text {
+		color: #FFFFFF;
+		font-size: 32rpx;
+		font-weight: 600;
+		background-color: #007fff;
+		padding: 20rpx 40rpx;
+		border-radius: 40rpx;
+		box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.2);
+}
+.role-tag {
+		font-size: 24rpx;
+		padding: 8rpx 16rpx;
+		border-radius: 4rpx;
+		background-color: #f0f0f0;
+		color: #666;
+}
+.role-tag.master {
+		background-color: #e6f7ed;
+		color: #2ecc71;
+}

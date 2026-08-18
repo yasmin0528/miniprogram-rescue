@@ -1,0 +1,98 @@
+<script lang="uts">
+	const AUTH_WHITELIST = ['/pages/profile/profile']
+
+	const normalizeUrl = (url: string): string => {
+		const idx = url.indexOf('?')
+		return idx >= 0 ? url.slice(0, idx) : url
+	}
+
+	const isAuthed = (): boolean => {
+		const token = uni.getStorageSync('master_token') as string
+		return Boolean(token)
+	}
+
+	const isInWhitelist = (url: string): boolean => {
+		const path = normalizeUrl(url)
+		return AUTH_WHITELIST.includes(path)
+	}
+
+	const redirectToLogin = () => {
+		uni.switchTab({ url: '/pages/profile/profile' })
+	}
+
+	const guardRoute = (url: string): boolean => {
+		if (isInWhitelist(url)) {
+			return true
+		}
+		if (isAuthed()) {
+			return true
+		}
+		redirectToLogin()
+		return false
+	}
+
+	// #ifdef APP-ANDROID || APP-HARMONY
+	let firstBackTime = 0
+	// #endif
+
+	export default {
+		onLaunch() {
+			console.log('App Launch')
+			uni.addInterceptor('navigateTo', {
+				invoke: (args) => guardRoute(args.url)
+			})
+			uni.addInterceptor('redirectTo', {
+				invoke: (args) => guardRoute(args.url)
+			})
+			uni.addInterceptor('reLaunch', {
+				invoke: (args) => guardRoute(args.url)
+			})
+			uni.addInterceptor('switchTab', {
+				invoke: (args) => guardRoute(args.url)
+			})
+		},
+		onShow() {
+			console.log('App Show')
+			const pages = getCurrentPages()
+			const current = pages.length > 0 ? '/' + (pages[pages.length - 1] as any).route : ''
+			if (current && !isInWhitelist(current) && !isAuthed()) {
+				redirectToLogin()
+			}
+		},
+		onHide() {
+			console.log('App Hide')
+		},
+		// #ifdef APP-ANDROID || APP-HARMONY
+		onLastPageBackPress() {
+			console.log('App LastPageBackPress')
+			if (firstBackTime == 0) {
+				uni.showToast({
+					title: '再按一次退出应用',
+					position: 'bottom',
+				})
+				firstBackTime = Date.now()
+				setTimeout(() => {
+					firstBackTime = 0
+				}, 2000)
+			} else if (Date.now() - firstBackTime < 2000) {
+				firstBackTime = Date.now()
+				uni.exit()
+			}
+		},
+		// #endif
+		onExit() {
+			console.log('App Exit')
+		},
+	}
+</script>
+
+<style>
+	/*每个页面公共css */
+	.uni-row {
+		flex-direction: row;
+	}
+
+	.uni-column {
+		flex-direction: column;
+	}
+</style>

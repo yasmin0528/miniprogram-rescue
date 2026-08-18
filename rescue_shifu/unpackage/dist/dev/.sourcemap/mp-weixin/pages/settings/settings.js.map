@@ -1,0 +1,1 @@
+{"version":3,"file":"settings.js","sources":["F:/HBuilderX/HBuilderX.4.29.2024093009/HBuilderX/plugins/uniapp-cli-vite/uniPage:/cGFnZXMvc2V0dGluZ3Mvc2V0dGluZ3MudXZ1ZQ"],"sourcesContent":["import MiniProgramPage from 'E:/rescue/rescue_shifu/pages/settings/settings.uvue'\nwx.createPage(MiniProgramPage)"],"names":["MiniProgramPage"],"mappings":";;;;;;;;;;;;;;AACA,GAAG,WAAWA,SAAe;"}

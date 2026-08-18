@@ -1,101 +1,102 @@
 package com.tongyi.rescue_api.domain.entity;
 
-import javax.persistence.*;
-import java.math.BigDecimal;
-import java.util.Date;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.Data;
 
+import java.time.LocalDateTime;
+
+@Data
 @Entity
-@Table(name = "orders")
+@Table(name = "rescue_order")
 public class Order {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
-    @Column(name = "order_no", nullable = false, unique = true)
+    @Id
+    private String id;
+
+    @Column(unique = true)
     private String orderNo;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    /** 订单类型: 1即刻单 2预约单 */
+    private Integer orderType;
 
-    @Column(name = "status")
+    /** 预约时间(预约单必填) */
+    private LocalDateTime appointmentTime;
+
+    // 下单用户信息
+    private String customerId;
+    private String customerName;
+    private String customerPhone;
+
+    /** 服务类型编码，如 emergency_charge/jump_start/... */
+    private String serviceType;
+
+    // 车辆与位置信息
+    private String plateNo;
+    private String address;
+    private Double lat;
+    private Double lng;
+    private String remark;
+
+    /** 服务商ID */
+    private String agencyId;
+
+    /** 接单人id */
+    @Column(name = "order_receiving_id")
+    private String orderReceivingId;
+
+    /** 是否服务商订单: 0否 1是 */
+    @Column(name = "agency_order_type")
+    private Integer agencyOrderType;
+
+    /** 订单金额 */
+    @Column(name = "price", precision = 10, scale = 2)
+    private java.math.BigDecimal price;
+
+    /** 抽成 */
+    @Column(name = "ratio", precision = 5, scale = 2)
+    private java.math.BigDecimal ratio;
+
+    /** 可分账总金额（分） */
+    @Column(name = "net_price")
+    private Integer netPrice;
+
+    /** 师傅可得金额（分） */
+    @Column(name = "master_income_amount")
+    private Integer masterIncomeAmount;
+
+    /** 服务商可得金额（分） */
+    @Column(name = "provider_income_amount")
+    private Integer providerIncomeAmount;
+
+    /** 是否派单：0否 1是 */
+    @Column(name = "is_dispatch")
+    private Integer isDispatch;
+
+    /** 派单接收师傅ID（唯一来源） */
+    @Column(name = "dispatch_id")
+    private String dispatchId;
+
+    /** 派单安全 token */
+    @Column(name = "dispatch_token")
+    private String dispatchToken;
+
+    /** 结算状态：UNSETTLED/SETTLED */
+    @Column(name = "settlement_status")
+    private String settlementStatus;
+
+    /**
+     * 当前状态:
+     * CREATED/PAID/ACCEPTED/DEPARTED/ARRIVED/COMPLETED/CANCELLED/REFUND
+     */
     private String status;
 
-    @Column(name = "amount")
-    private BigDecimal amount;
-
-    @Column(name = "description")
-    private String description;
-
-    @Column(name = "created_time")
-    private Date createdTime;
-
-    @Column(name = "updated_time")
-    private Date updatedTime;
-
-    public Order() {
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getOrderNo() {
-        return orderNo;
-    }
-
-    public void setOrderNo(String orderNo) {
-        this.orderNo = orderNo;
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public BigDecimal getAmount() {
-        return amount;
-    }
-
-    public void setAmount(BigDecimal amount) {
-        this.amount = amount;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public Date getCreatedTime() {
-        return createdTime;
-    }
-
-    public void setCreatedTime(Date createdTime) {
-        this.createdTime = createdTime;
-    }
-
-    public Date getUpdatedTime() {
-        return updatedTime;
-    }
-
-    public void setUpdatedTime(Date updatedTime) {
-        this.updatedTime = updatedTime;
-    }
+    // 审计字段
+    private Integer isDeleted;
+    private LocalDateTime createTime;
+    private LocalDateTime updateTime;
+    private String createBy;
+    private String updateBy;
 }

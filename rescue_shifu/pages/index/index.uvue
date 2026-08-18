@@ -1,0 +1,444 @@
+<template>
+	<view class="page">
+		<view class="header">
+			<text class="page-title">接单大厅</text>
+		</view>
+
+		<scroll-view class="list" scroll-y="true" refresher-enabled="true" :refresher-triggered="refreshing" @refresherrefresh="onRefresh">
+			<view v-if="orders.length === 0" class="empty">
+				<text class="empty-text">暂无新订单，请耐心等待</text>
+			</view>
+
+			<view v-for="item in orders" :key="item.id" class="card" @click="goDetail(item.id)">
+				<view class="card-top">
+					<view class="time-box">
+						<text class="time-text">{{ formatTime(item.createTime) }}</text>
+					</view>
+					<text class="price">¥{{ item.orderPrice }}</text>
+				</view>
+
+				<view class="card-content">
+					<view class="content-left">
+						<view class="content-row">
+							<text class="row-label">订单号：</text>
+							<text class="row-value">{{ item.orderNo }}</text>
+						</view>
+						<view class="content-row">
+							<text class="row-label">车牌：</text>
+							<text class="row-value">{{ item.plateNo }}</text>
+						</view>
+						<view class="content-row">
+							<text class="row-label">备注：</text>
+							<text class="row-value">{{ item.remark || '无' }}</text>
+						</view>
+						<view class="content-row">
+							<text class="row-label">客户号码：</text>
+							<text class="row-value highlight" @click.stop="callPhone(item.customerPhone)">{{ item.customerPhone }}</text>
+						</view>
+						<view class="content-row">
+							<text class="row-label">救援地址：</text>
+							<text class="row-value highlight" @click.stop="openMap(item)">{{ item.address }}</text>
+						</view>
+					</view>
+					<view class="content-right">
+						<view :class="['status-tag', getTagClass(item.serviceType)]">
+							{{ item.serviceType }}
+						</view>
+					</view>
+				</view>
+
+				<view class="card-footer">
+					<view class="footer-actions">
+						<button class="btn-secondary" @click.stop="goDetail(item.id)">查看详情</button>
+						<button class="btn-primary" @click.stop="onGrabOrder(item.id)">立即接单</button>
+					</view>
+				</view>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { currentUserId, type MyOrder } from '../../common/mockData.uts'
+	import { acceptOrder, getShifuHallOrders, type ShifuHallOrderRaw, type ShifuHallOrderItem } from '../../common/api.uts'
+
+	const refreshing = ref(false)
+	const loadingOrders = ref(false)
+	const orders = ref<MyOrder[]>([])
+
+	const currentLocation = ref<{ lat: number; lng: number } | null>(null)
+
+	const mapHallOrder = (item: ShifuHallOrderItem): MyOrder => {
+		const raw = item.order as ShifuHallOrderRaw
+		const amountYuan = item.netPrice != null
+			? Number(item.netPrice)
+			: (raw.netPrice != null ? Number(raw.netPrice) : (raw.price != null ? Number(raw.price) : 0))
+		return {
+			id: raw.id,
+			orderNo: raw.orderNo || '-',
+			createTime: raw.createTime ? new Date(raw.createTime).getTime() : Date.now(),
+			serviceType: raw.serviceType || '-',
+			plateNo: raw.plateNo || '-',
+			status: 'new',
+			dispatchStatus: 'none',
+			dispatchToName: '',
+			orderPrice: Number(amountYuan.toFixed(2)),
+			ratio: raw.ratio ?? null,
+			remark: raw.remark || '',
+			customerPhone: raw.customerPhone || '-',
+			customerName: raw.customerName || '',
+			address: raw.address || '',
+			lat: raw.lat || 0,
+			lng: raw.lng || 0,
+			agencyId: raw.agencyId || '',
+			masterId: '',
+			orderReceivingId: raw.orderReceivingId || '',
+			images: [],
+			feedbackImages: []
+		}
+	}
+
+	const loadOrders = async () => {
+		if (loadingOrders.value) return
+		const loc = currentLocation.value
+		if (!loc) {
+			refreshing.value = false
+			return
+		}
+
+		const storedUserId = uni.getStorageSync('master_user_id') as string
+		const userId = storedUserId || currentUserId.value
+		if (!userId) {
+			orders.value = []
+			refreshing.value = false
+			return
+		}
+
+		loadingOrders.value = true
+		try {
+			const data = await getShifuHallOrders({
+				userId: userId,
+				lat: loc.lat,
+				lng: loc.lng,
+				radiusKm: 10,
+				visibleStatuses: 'PAID',
+				excludeStatus: 'CREATED,ACCEPTED,DEPARTED,ARRIVED,COMPLETED'
+			})
+			console.log('[hallOrders] raw data:', data)
+			orders.value = data.map(mapHallOrder)
+			console.log('[hallOrders] mapped orders:', orders.value)
+		} catch (err: any) {
+			uni.showToast({ title: err?.message ? String(err.message) : '订单加载失败', icon: 'none' })
+		} finally {
+			loadingOrders.value = false
+			refreshing.value = false
+		}
+	}
+
+	const goDetail = (id: string) => {
+		uni.navigateTo({ url: `/pages/order-detail/order-detail?id=${id}` })
+	}
+
+	const formatTime = (ts: number): string => {
+		const d = new Date(ts)
+		const pad = (n: number): string => (n < 10 ? '0' + n : '' + n)
+		return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+	}
+
+	const callPhone = (phone: string) => {
+		if (!phone || phone == '-') return
+		uni.makePhoneCall({ phoneNumber: phone })
+	}
+
+	const openMap = (item: MyOrder) => {
+		if (item.lat == 0 || item.lng == 0) return
+		uni.openLocation({
+			latitude: item.lat,
+			longitude: item.lng,
+			name: item.address,
+			address: item.address
+		})
+	}
+
+	const getTagClass = (type: string): string => {
+		switch (type) {
+			case '搭电': return 'tag-electricity'
+			case '换胎': return 'tag-tire'
+			case '新能源紧急充电': return 'tag-ev'
+			default: return 'tag-default'
+		}
+	}
+
+	const onGrabOrder = (id: string) => {
+		uni.showModal({
+			title: '提示',
+			content: '确定要接下此订单吗？',
+			success: (res) => {
+				if (res.confirm) {
+					doAcceptOrder(id)
+				}
+			}
+		})
+	}
+
+	const doAcceptOrder = async (orderId: string) => {
+		try {
+			const storedUserId = uni.getStorageSync('master_user_id') as string
+			const operatorId = storedUserId || currentUserId.value
+			if (!operatorId) {
+				uni.showToast({ title: '请先登录', icon: 'none' })
+				return
+			}
+			await acceptOrder({ orderId, operatorId })
+			uni.showToast({ title: '接单成功', icon: 'success' })
+			uni.switchTab({ url: '/pages/orders/orders' })
+		} catch (err: any) {
+			uni.showToast({ title: err?.message ? String(err.message) : '接单失败', icon: 'none' })
+		}
+	}
+
+	const updateCurrentLocation = () => {
+		uni.authorize({
+			scope: 'scope.userLocation',
+			success: () => {
+				uni.getLocation({
+					type: 'gcj02',
+					success: (res) => {
+						currentLocation.value = { lat: res.latitude, lng: res.longitude }
+						console.log('当前定位:', currentLocation.value)
+						loadOrders()
+					},
+					fail: () => {
+						currentLocation.value = null
+						orders.value = []
+						uni.showToast({ title: '定位失败，请检查定位权限', icon: 'none' })
+					}
+				})
+			},
+			fail: () => {
+				currentLocation.value = null
+				uni.showModal({
+					title: '需要定位权限',
+					content: '请允许定位权限以查看附近 10km 订单',
+					confirmText: '去开启',
+					cancelText: '取消',
+					success: (res) => {
+						if (res.confirm) {
+							uni.openSetting()
+						}
+					}
+				})
+			}
+		})
+	}
+
+	onShow(() => {
+		const storedUserId = uni.getStorageSync('master_user_id') as string
+		if (!storedUserId && !currentUserId.value) {
+			orders.value = []
+			return
+		}
+		updateCurrentLocation()
+	})
+
+	onMounted(() => {
+		uni.$on('auth:login', () => {
+			console.log('[hallOrders] auth:login received, refreshing')
+			updateCurrentLocation()
+		})
+	})
+
+	onUnmounted(() => {
+		uni.$off('auth:login')
+	})
+
+	const onRefresh = async () => {
+		refreshing.value = true
+		updateCurrentLocation()
+	}
+</script>
+
+<style>
+/* 基础背景与布局 */
+.page {
+	padding: 32rpx;
+	background-color: #F5F7FA;
+	min-height: 100vh;
+}
+
+.header {
+	margin-bottom: 40rpx;
+	padding-top: 20rpx;
+}
+
+.page-title {
+	font-size: 48rpx;
+	font-weight: 600;
+	color: #1D1D1F;
+	letter-spacing: -0.5px;
+}
+
+/* 卡片样式 */
+.card {
+	background: #FFFFFF;
+	border-radius: 12rpx;
+	margin-bottom: 32rpx;
+	overflow: hidden;
+	border: 1rpx solid #E1E8ED;
+	box-shadow: 0 4rpx 16rpx rgba(0, 127, 255, 0.05);
+}
+
+.card-top {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	padding: 32rpx;
+	border-bottom: 1rpx solid #F0F5F9;
+}
+
+.time-box {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.time-text {
+	font-size: 28rpx;
+	color: #86868B;
+	font-weight: 400;
+}
+
+.price {
+	font-size: 40rpx;
+	color: #fb5607;
+	font-weight: 700;
+}
+
+/* 内容区域 */
+.card-content {
+	display: flex;
+	flex-direction: row;
+	padding: 32rpx;
+	position: relative;
+}
+
+.content-left {
+	flex: 1;
+}
+
+.content-row {
+	display: flex;
+	flex-direction: row;
+	margin-bottom: 20rpx;
+}
+
+.row-label {
+	font-size: 28rpx;
+	color: #86868B;
+	width: 160rpx;
+}
+
+.row-value {
+	font-size: 28rpx;
+	color: #1D1D1F;
+	flex: 1;
+	line-height: 1.5;
+}
+
+.highlight {
+	color: #007fff;
+	text-decoration: none;
+	font-weight: 600;
+}
+
+.highlight:active {
+	opacity: 0.6;
+}
+
+.content-right {
+	position: absolute;
+	right: 32rpx;
+	top: 32rpx;
+}
+
+/* 标签颜色 - 重点突出 */
+.status-tag {
+	padding: 8rpx 20rpx;
+	border-radius: 4rpx;
+	font-size: 22rpx;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.tag-electricity {
+	background-color: #EBF3FF;
+	color: #007fff;
+}
+
+.tag-tire {
+	background-color: #FFF9E6;
+	color: #ffbe0b;
+}
+
+.tag-ev {
+	background-color: #FFF2ED;
+	color: #fb5607;
+}
+
+.tag-default {
+	background-color: #F5F7FA;
+	color: #86868B;
+}
+
+/* 底部操作 */
+.card-footer {
+	padding: 0 32rpx 32rpx;
+	display: flex;
+	flex-direction: row;
+	justify-content: flex-end;
+}
+
+.footer-actions {
+	display: flex;
+	flex-direction: row;
+	gap: 24rpx;
+}
+
+.btn-primary {
+	height: 72rpx;
+	line-height: 72rpx;
+	padding: 0 48rpx;
+	background-color: #007fff;
+	color: #FFFFFF;
+	border-radius: 8rpx;
+	font-size: 26rpx;
+	font-weight: 600;
+	border: none;
+	margin: 0;
+	box-shadow: 0 4rpx 12rpx rgba(0, 127, 255, 0.2);
+}
+
+.btn-secondary {
+	height: 72rpx;
+	line-height: 72rpx;
+	padding: 0 48rpx;
+	background-color: #FFFFFF;
+	color: #007fff;
+	border-radius: 8rpx;
+	font-size: 26rpx;
+	font-weight: 500;
+	border: 1rpx solid #007fff;
+	margin: 0;
+}
+
+.btn-primary:active {
+	background-color: #0066CC;
+}
+
+.btn-secondary:active {
+	background-color: #F0F7FF;
+}
+
+</style>

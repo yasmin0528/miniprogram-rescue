@@ -1,0 +1,73 @@
+{
+	"pages": [
+		{
+			"path": "pages/index/index",
+			"style": {
+				"navigationBarTitleText": "接单大厅"
+			}
+		},
+		{
+			"path": "pages/orders/orders",
+			"style": {
+				"navigationBarTitleText": "我的订单"
+			}
+		},
+		{
+			"path": "pages/profile/profile",
+			"style": {
+				"navigationBarTitleText": "个人主页"
+			}
+		},
+		{
+			"path": "pages/order-detail/order-detail",
+			"style": {
+				"navigationBarTitleText": "订单详情"
+			}
+		},
+		{
+			"path": "pages/withdraw-records/withdraw-records",
+			"style": {
+				"navigationBarTitleText": "提现记录"
+			}
+		},
+		{
+			"path": "pages/settings/settings",
+			"style": {
+				"navigationBarTitleText": "设置"
+			}
+		}
+	],
+	"globalStyle": {
+		"navigationBarTextStyle": "black",
+		"navigationBarTitleText": "道路救援师傅端",
+		"navigationBarBackgroundColor": "#007AFF",
+		"backgroundColor": "#F5F5F5"
+	},
+	"tabBar": {
+		"color": "#999999",
+		"selectedColor": "#007AFF",
+		"backgroundColor": "#FFFFFF",
+		"borderStyle": "black",
+		"list": [
+			{
+				"pagePath": "pages/index/index",
+				"text": "接单大厅",
+				"iconPath": "static/tabbar/home.png",
+				"selectedIconPath": "static/tabbar/home-active.png"
+			},
+			{
+				"pagePath": "pages/orders/orders",
+				"text": "我的订单",
+				"iconPath": "static/tabbar/order.png",
+				"selectedIconPath": "static/tabbar/order-active.png"
+			},
+			{
+				"pagePath": "pages/profile/profile",
+				"text": "个人主页",
+				"iconPath": "static/tabbar/profile.png",
+				"selectedIconPath": "static/tabbar/profile-active.png"
+			}
+		]
+	},
+	"uniIdRouter": {}
+}

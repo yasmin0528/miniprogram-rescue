@@ -1,0 +1,611 @@
+<template>
+	<view class="page">
+		<view class="tabs">
+			<view class="tab" :class="{ active: activeTab === 'all' }" @click="switchTab('all')">
+				<text class="tab-text">全部</text>
+				<view v-if="activeTab === 'all'" class="tab-line"></view>
+			</view>
+			<view class="tab" :class="{ active: activeTab === 'processing' }" @click="switchTab('processing')">
+				<text class="tab-text">进行中</text>
+				<view v-if="activeTab === 'processing'" class="tab-line"></view>
+			</view>
+			<view class="tab" :class="{ active: activeTab === 'done' }" @click="switchTab('done')">
+				<text class="tab-text">已完成</text>
+				<view v-if="activeTab === 'done'" class="tab-line"></view>
+			</view>
+		</view>
+
+		<scroll-view class="list" scroll-y="true" refresher-enabled="true" :refresher-triggered="refreshing"
+			@refresherrefresh="onRefresh">
+			<view v-if="filteredOrders.length === 0" class="empty">
+				<text class="empty-text">暂无订单</text>
+			</view>
+
+			<view v-for="item in filteredOrders" :key="item.id" class="card">
+				<!-- 隐藏的分享按钮，用于代码逻辑触发 -->
+				<button v-if="showShareMask && currentDispatchOrderId === item.id" class="hidden-share-btn"
+					open-type="share" :data-order-id="item.id" @click="showShareMask = false">
+					<text class="share-mask-text">点击发送给微信好友</text>
+				</button>
+				<!-- 卡片头部：状态标签改为贴合右上角 -->
+				<view class="status-tag" :class="statusClass(item.status)">
+					<text class="status-text">{{ statusText(item.status) }}</text>
+				</view>
+
+				<!-- 卡片标题 -->
+				<view class="card-header">
+					<text class="service-title">{{ item.serviceType }}</text>
+				</view>
+
+				<!-- 卡片内容 -->
+				<view class="card-body" @click="goDetail(item.id)">
+					<view class="info-item">
+						<text class="info-label">订单号：</text>
+						<text class="info-value">{{ item.orderNo }}</text>
+					</view>
+					<view class="info-item">
+						<text class="info-label">车牌号：</text>
+						<text class="info-value">{{ item.plateNo }}</text>
+					</view>
+					<view class="info-item">
+						<text class="info-label">备注：</text>
+						<text class="info-value">{{ item.remark || '无' }}</text>
+					</view>
+					<view class="info-item">
+						<text class="info-label">客户号码：</text>
+						<text class="info-value link highlight-blue"
+							@click.stop="callPhone(item.customerPhone)">{{ item.customerPhone }}</text>
+					</view>
+					<view class="info-item">
+						<text class="info-label">救援地址：</text>
+						<text class="info-value link highlight-blue"
+							@click.stop="openMap(item)">{{ item.address }}</text>
+					</view>
+					<view class="info-item price-row">
+						<text class="info-label">订单金额：</text>
+						<text class="info-value price-highlight">¥{{ item.orderPrice }}</text>
+					</view>
+				</view>
+
+				<!-- 底部操作栏 -->
+				<view class="card-footer">
+					<button class="btn btn-detail" @click="goDetail(item.id)">查看详情</button>
+					<template v-if="item.status === 'processing'">
+						<!-- 只有服务商（Provider）才能看到派单/撤回按钮 -->
+						<template v-if="item.agencyId === getLoginUserId()">
+							<button v-if="item.dispatchStatus !== 'dispatched' && item.dispatchStatus !== 'accepted' && item.agencyOrderType === 1" class="btn btn-dispatch"
+								@click="setCommissionAndShare(item.id)">派单分享</button>
+							<button v-else class="btn btn-revoke" @click.stop="revokeDispatch(item.id)">撤回派单</button>
+						</template>
+					</template>
+				</view>
+
+				<!-- 派单信息展示 -->
+				<view v-if="item.dispatchStatus === 'dispatched' || item.dispatchStatus === 'accepted'" class="dispatch-info">
+					<text class="dispatch-label">派单给：</text>
+					<text class="dispatch-value">{{ item.dispatchToName || '待师傅确认' }}</text>
+				</view>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { type MyOrder, type OrderStatus } from '../../common/mockData.uts'
+	import { getOrderList, createDispatch, revokeDispatch as revokeDispatchApi, type ShifuHallOrderRaw, type OrderListItem } from '../../common/api.uts'
+
+	const activeTab = ref<'all' | 'processing' | 'done'>('all')
+	const refreshing = ref(false)
+	const loading = ref(false)
+
+	const orders = ref<MyOrder[]>([])
+	const loginUserId = ref('')
+
+	const syncLoginUserId = (): string => {
+		const storedUserId = uni.getStorageSync('master_user_id') as string
+		loginUserId.value = storedUserId || ''
+		return loginUserId.value
+	}
+
+	const mapOrder = (item: OrderListItem): MyOrder => {
+		const raw = item.order as ShifuHallOrderRaw
+		const dispatchStatus = raw.isDispatch === 1
+			? (raw.dispatchId ? 'accepted' : 'dispatched')
+			: 'none'
+		const amountYuan = item.netPrice != null
+			? Number(item.netPrice)
+			: (raw.netPrice != null ? Number(raw.netPrice) : (raw.price != null ? Number(raw.price) : 0))
+		return {
+			id: raw.id,
+			orderNo: raw.orderNo || '-',
+			createTime: raw.createTime ? new Date(raw.createTime).getTime() : Date.now(),
+			serviceType: raw.serviceType || '-',
+			plateNo: raw.plateNo || '-',
+			status: raw.status ? (raw.status == 'COMPLETED' ? 'done' : (raw.status == 'ACCEPTED' || raw.status == 'DEPARTED' || raw.status == 'ARRIVED') ? 'processing' : 'new') : 'new',
+			dispatchStatus: dispatchStatus,
+			dispatchToName: raw.dispatchId || '',
+			orderPrice: Number(amountYuan.toFixed(2)),
+			ratio: raw.ratio ?? null,
+			remark: raw.remark || '',
+			customerPhone: raw.customerPhone || '-',
+			customerName: raw.customerName || '',
+			address: raw.address || '',
+			lat: raw.lat || 0,
+			lng: raw.lng || 0,
+			agencyId: raw.agencyId || '',
+			agencyOrderType: raw.agencyOrderType ?? null,
+			masterId: raw.orderReceivingId || '',
+			orderReceivingId: raw.orderReceivingId || '',
+			images: [],
+			feedbackImages: []
+		}
+	}
+
+	const loadOrders = async () => {
+		if (loading.value) return
+		const operatorId = syncLoginUserId()
+		if (!operatorId) {
+			orders.value = []
+			refreshing.value = false
+			return
+		}
+		loading.value = true
+		try {
+			console.log('[myOrders] fetching', { operatorId })
+			const data = await getOrderList({ operatorId })
+			console.log('[myOrders] raw data:', data)
+			orders.value = data.map(mapOrder)
+			console.log('[myOrders] fetched', { count: orders.value.length })
+		} catch (err: any) {
+			uni.showToast({ title: err?.message ? String(err.message) : '加载订单失败', icon: 'none' })
+		} finally {
+			loading.value = false
+			refreshing.value = false
+		}
+	}
+
+	const getLoginUserId = (): string => {
+		return loginUserId.value
+	}
+    
+	const filteredOrders = computed<MyOrder[]>(() => {
+	  const list = activeTab.value === 'all'
+		? orders.value
+		: orders.value.filter((o : MyOrder) : boolean => o.status === activeTab.value)
+	
+	  console.log('[myOrders] filter', {
+		activeTab: activeTab.value,
+		total: orders.value.length,
+		matched: list.length
+	  })
+	
+	  return list
+	})
+
+	const switchTab = (tab : 'all' | 'processing' | 'done') => {
+		activeTab.value = tab
+	}
+
+	const formatTime = (ts : number) : string => {
+		const d = new Date(ts)
+		const pad = (n : number) : string => (n < 10 ? '0' + n : '' + n)
+		return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+	}
+
+	const statusText = (s : OrderStatus) : string => {
+		if (s === 'new') return '待接单'
+		if (s === 'processing') return '进行中'
+		return '已完成'
+	}
+
+	const statusClass = (s : OrderStatus) : string => {
+		if (s === 'new') return 'st-new'
+		if (s === 'processing') return 'st-processing'
+		return 'st-done'
+	}
+
+	const goDetail = (id : string) => {
+		uni.navigateTo({ url: `/pages/order-detail/order-detail?id=${id}` })
+	}
+
+	const callPhone = (phone : string) => {
+		if (!phone || phone == '-') return
+		uni.makePhoneCall({ phoneNumber: phone })
+	}
+
+	const openMap = (item : MyOrder) => {
+		if (item.lat == 0 || item.lng == 0) return
+		uni.openLocation({
+			latitude: item.lat,
+			longitude: item.lng,
+			name: item.address,
+			address: item.address
+		})
+	}
+
+	const revokeDispatch = async (id : string) => {
+		const operatorId = getLoginUserId()
+		if (!operatorId) {
+			uni.showToast({ title: '请先登录', icon: 'none' })
+			return
+		}
+		uni.showModal({
+			title: '提示',
+			content: '确定要撤回派单吗？',
+			success: async (res) => {
+				if (!res.confirm) return
+				try {
+					await revokeDispatchApi(id, operatorId)
+					uni.showToast({ title: '撤回成功', icon: 'success' })
+					loadOrders()
+				} catch (err: any) {
+					uni.showToast({ title: err?.message ? String(err.message) : '撤回失败', icon: 'none' })
+				}
+			}
+		})
+	}
+
+	const currentDispatchOrderId = ref('')
+	const currentDispatchToken = ref('')
+	const currentDispatchSharePath = ref('')
+	const showShareMask = ref(false)
+
+	const setCommissionAndShare = (orderId : string) => {
+		const order = orders.value.find((o : MyOrder) : boolean => o.id === orderId)
+		if (order == null) return
+
+		const operatorId = getLoginUserId()
+		if (!operatorId) {
+			uni.showToast({ title: '请先登录', icon: 'none' })
+			return
+		}
+		if (order.agencyId !== operatorId) {
+			uni.showToast({ title: '仅服务商可派单', icon: 'none' })
+			return
+		}
+		if (order.status !== 'processing') {
+			uni.showToast({ title: '当前订单不可派单', icon: 'none' })
+			return
+		}
+
+		uni.showModal({
+			title: '派单抽成金额(元)',
+			editable: true,
+			placeholderText: '请输入固定抽成金额',
+			success: async (res) => {
+				if (!res.confirm) return
+				const input = (res.content || '').trim()
+				if (!/^\d+(\.\d{1,2})?$/.test(input)) {
+					uni.showToast({ title: '请输入有效金额', icon: 'none' })
+					return
+				}
+				const amountYuan = Number(input)
+				if (isNaN(amountYuan) || amountYuan < 0) {
+					uni.showToast({ title: '请输入有效金额', icon: 'none' })
+					return
+				}
+				const commissionAmount = Math.round(amountYuan * 100)
+				try {
+					const resp = await createDispatch(orderId, operatorId, commissionAmount)
+					currentDispatchOrderId.value = orderId
+					currentDispatchToken.value = resp.token
+					const idx = orders.value.findIndex((o : MyOrder) : boolean => o.id === orderId)
+					if (idx >= 0) {
+						orders.value[idx].dispatchStatus = 'dispatched'
+						orders.value[idx].dispatchToName = '待师傅确认'
+					}
+					showShareMask.value = true
+				} catch (err: any) {
+					uni.showToast({ title: err?.message ? String(err.message) : '派单失败', icon: 'none' })
+				}
+			}
+		})
+	}
+
+	const onRefresh = async () => {
+		refreshing.value = true
+		loadOrders()
+	}
+
+	onShow(() => {
+		syncLoginUserId()
+		loadOrders()
+	})
+
+	onMounted(() => {
+		uni.$on('auth:login', () => {
+			console.log('[myOrders] auth:login received, refreshing')
+			syncLoginUserId()
+			loadOrders()
+		})
+	})
+
+	onUnmounted(() => {
+		uni.$off('auth:login')
+	})
+
+	onShareAppMessage((res) => {
+		const anyRes = res as any
+		const orderId = anyRes?.target?.dataset?.orderId as string | null
+
+		let path = '/pages/orders/orders'
+		if (orderId && currentDispatchOrderId.value === orderId && currentDispatchToken.value) {
+			path = `/pages/order-detail/order-detail?dispatchToken=${currentDispatchToken.value}&from=dispatch`
+		}
+
+		return {
+			title: '【派单】紧急救援订单，请尽快处理',
+			path: path
+		}
+	})
+</script>
+
+<style>
+	.page {
+		background-color: #F5F5F7;
+		min-height: 100vh;
+	}
+
+	/* 顶部 TabBar 样式 */
+	.tabs {
+		display: flex;
+		flex-direction: row;
+		background-color: #FFFFFF;
+		height: 100rpx;
+		align-items: center;
+		position: sticky;
+		top: 0;
+		z-index: 10;
+		border-bottom: 1rpx solid #E1E8ED;
+	}
+
+	.tab {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		height: 100%;
+		position: relative;
+	}
+
+	.tab-text {
+		font-size: 28rpx;
+		color: #86868B;
+		transition: all 0.2s ease;
+	}
+
+	.tab.active .tab-text {
+		color: #007fff;
+		font-weight: 600;
+	}
+
+	.tab-line {
+		position: absolute;
+		bottom: 0;
+		width: 48rpx;
+		height: 4rpx;
+		background-color: #007fff;
+		border-radius: 2rpx;
+	}
+
+	/* 列表容器 */
+	.list {
+		padding: 32rpx;
+		height: calc(100vh - 100rpx);
+	}
+
+	/* 订单卡片样式 */
+	.card {
+		background-color: #FFFFFF;
+		border-radius: 12rpx;
+		padding: 32rpx;
+		margin-bottom: 32rpx;
+		border: 1rpx solid #E1E8ED;
+		position: relative;
+		overflow: hidden;
+	}
+
+	.card-header {
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 32rpx;
+		padding-right: 140rpx;
+	}
+
+	.service-title {
+		font-size: 32rpx;
+		font-weight: 600;
+		color: #1D1D1F;
+	}
+
+	.status-tag {
+		position: absolute;
+		top: 0;
+		right: 0;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		padding: 12rpx 24rpx;
+		border-bottom-left-radius: 12rpx;
+		font-size: 22rpx;
+		font-weight: 600;
+		letter-spacing: 0.5px;
+	}
+
+
+	/* 状态颜色区分 - 参考 Eisenhower 规范 */
+	.st-processing {
+		background-color: #EBF3FF;
+		color: #007fff;
+	}
+
+	.st-done {
+		background-color: #E6F7ED;
+		color: #2ecc71;
+	}
+
+	.st-new {
+		background-color: #FFF9E6;
+		color: #ffbe0b;
+	}
+
+	/* 卡片内容区域 */
+	.card-body {
+		display: flex;
+		flex-direction: column;
+		gap: 20rpx;
+	}
+
+	.info-item {
+		display: flex;
+		flex-direction: row;
+		line-height: 1.5;
+	}
+
+	.info-label {
+		font-size: 26rpx;
+		color: #86868B;
+		width: 160rpx;
+		flex-shrink: 0;
+	}
+
+	.info-value {
+		font-size: 26rpx;
+		color: #1D1D1F;
+	}
+
+	.link {
+		text-decoration: none;
+	}
+
+	.highlight-blue {
+		color: #007fff;
+		font-weight: 600;
+	}
+
+	.price-highlight {
+		color: #fb5607;
+		font-weight: 700;
+		font-size: 32rpx;
+	}
+
+	/* 底部按钮区域 */
+	.card-footer {
+		display: flex;
+		flex-direction: row;
+		justify-content: flex-end;
+		gap: 24rpx;
+		margin-top: 32rpx;
+		padding-top: 32rpx;
+		border-top: 1rpx solid #F0F5F9;
+	}
+
+	.btn {
+		min-width: 176rpx;
+		height: 72rpx;
+		line-height: 72rpx;
+		text-align: center;
+		border-radius: 8rpx;
+		font-size: 26rpx;
+		margin: 0;
+		padding: 0 32rpx;
+		font-weight: 600;
+	}
+
+	.btn-detail {
+		background-color: #FFFFFF;
+		color: #007fff;
+		border: 1rpx solid #007fff;
+	}
+
+	.btn-dispatch {
+		background-color: #007fff;
+		color: #FFFFFF;
+		border: none;
+		box-shadow: 0 4rpx 12rpx rgba(0, 127, 255, 0.2);
+	}
+
+	.btn-revoke {
+		background-color: #FFFFFF;
+		color: #ff0000;
+		border: 1rpx solid #ff0000;
+	}
+
+	/* 派单详情信息 */
+	.dispatch-info {
+		margin-top: 24rpx;
+		padding: 20rpx 24rpx;
+		background-color: #F5F7FA;
+		border-radius: 8rpx;
+		display: flex;
+		flex-direction: row;
+		border: 1rpx solid #E1E8ED;
+	}
+
+	.dispatch-label {
+		font-size: 24rpx;
+		color: #86868B;
+	}
+
+	.dispatch-value {
+		font-size: 24rpx;
+		color: #007fff;
+		font-weight: 600;
+	}
+
+	.empty {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		padding-top: 240rpx;
+	}
+
+	.empty-text {
+		color: #86868B;
+		font-size: 28rpx;
+	}
+
+	/* 全屏分享引导遮罩 */
+	.hidden-share-btn {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.6);
+		z-index: 100;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: none;
+		padding: 0;
+		margin: 0;
+		border-radius: 12rpx;
+	}
+
+	.share-mask-text {
+		color: #FFFFFF;
+		font-size: 32rpx;
+		font-weight: 600;
+		background-color: #007fff;
+		padding: 20rpx 40rpx;
+		border-radius: 40rpx;
+		box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.2);
+	}
+
+	.role-tag {
+		font-size: 24rpx;
+		padding: 8rpx 16rpx;
+		border-radius: 4rpx;
+		background-color: #f0f0f0;
+		color: #666;
+	}
+
+	.role-tag.master {
+		background-color: #e6f7ed;
+		color: #2ecc71;
+	}
+</style>

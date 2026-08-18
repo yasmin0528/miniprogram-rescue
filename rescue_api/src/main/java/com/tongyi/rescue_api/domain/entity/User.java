@@ -1,122 +1,131 @@
 package com.tongyi.rescue_api.domain.entity;
 
-import javax.persistence.*;
-import java.util.Date;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
+import java.time.LocalDateTime;
+
+/**
+ * 用户端账号实体
+ */
 @Entity
-@Table(name = "users")
+@Table(
+        name = "sys_user",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_sys_user_open_id_deleted", columnNames = {"open_id", "is_deleted"}),
+                @UniqueConstraint(name = "uk_sys_user_phone_deleted", columnNames = {"phone_number", "is_deleted"})
+        },
+        indexes = {
+                @Index(name = "idx_sys_user_status", columnList = "status"),
+                @Index(name = "idx_sys_user_is_deleted", columnList = "is_deleted")
+        }
+)
 public class User {
+
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "id", length = 50, nullable = false)
+    private String id;
 
-    @Column(name = "username", nullable = false, unique = true)
-    private String username;
+    @Column(name = "nick_name", length = 255)
+    private String nickName;
 
-    @Column(name = "password", nullable = false)
-    private String password;
+    @Column(name = "status", nullable = false)
+    private Integer status;
 
-    @Column(name = "email")
-    private String email;
+    @Column(name = "phone_number", length = 20)
+    private String phoneNumber;
 
-    @Column(name = "phone")
-    private String phone;
+    @Column(name = "open_id", length = 255, nullable = false)
+    private String openId;
 
-    @Column(name = "real_name")
-    private String realName;
+    @Column(name = "is_deleted", nullable = false)
+    private Integer isDeleted;
 
-    @Column(name = "avatar")
-    private String avatar;
+    @Column(name = "create_time", nullable = false)
+    private LocalDateTime createTime;
 
-    @Column(name = "status")
-    private String status;
+    @Column(name = "update_time", nullable = false)
+    private LocalDateTime updateTime;
 
-    @Column(name = "created_time")
-    private Date createdTime;
-
-    @Column(name = "updated_time")
-    private Date updatedTime;
+    @Column(name = "union_id", length = 255)
+    private String unionId;
 
     public User() {
     }
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 
-    public String getUsername() {
-        return username;
+    public String getNickName() {
+        return nickName;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
+    public void setNickName(String nickName) {
+        this.nickName = nickName;
     }
 
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public String getRealName() {
-        return realName;
-    }
-
-    public void setRealName(String realName) {
-        this.realName = realName;
-    }
-
-    public String getAvatar() {
-        return avatar;
-    }
-
-    public void setAvatar(String avatar) {
-        this.avatar = avatar;
-    }
-
-    public String getStatus() {
+    public Integer getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(Integer status) {
         this.status = status;
     }
 
-    public Date getCreatedTime() {
-        return createdTime;
+    public String getPhoneNumber() {
+        return phoneNumber;
     }
 
-    public void setCreatedTime(Date createdTime) {
-        this.createdTime = createdTime;
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
     }
 
-    public Date getUpdatedTime() {
-        return updatedTime;
+    public String getOpenId() {
+        return openId;
     }
 
-    public void setUpdatedTime(Date updatedTime) {
-        this.updatedTime = updatedTime;
+    public void setOpenId(String openId) {
+        this.openId = openId;
+    }
+
+    public Integer getIsDeleted() {
+        return isDeleted;
+    }
+
+    public void setIsDeleted(Integer isDeleted) {
+        this.isDeleted = isDeleted;
+    }
+
+    public LocalDateTime getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(LocalDateTime createTime) {
+        this.createTime = createTime;
+    }
+
+    public LocalDateTime getUpdateTime() {
+        return updateTime;
+    }
+
+    public void setUpdateTime(LocalDateTime updateTime) {
+        this.updateTime = updateTime;
+    }
+
+    public String getUnionId() {
+        return unionId;
+    }
+
+    public void setUnionId(String unionId) {
+        this.unionId = unionId;
     }
 }

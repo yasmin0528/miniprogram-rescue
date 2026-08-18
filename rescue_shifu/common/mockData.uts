@@ -1,0 +1,174 @@
+import { ref, reactive } from 'vue'
+
+export type OrderStatus = 'new' | 'processing' | 'done'
+export type DispatchStatus = 'none' | 'dispatched' | 'accepted'
+
+export type MyOrder = {
+	id : string
+	orderNo : string
+	createTime : number
+	serviceType : string
+	plateNo : string
+	status : OrderStatus
+	dispatchStatus : DispatchStatus
+	dispatchToName : string
+	orderPrice : number
+	ratio?: number | null
+	remark : string
+	customerPhone : string
+	customerName : string
+	address : string
+	lat : number
+	lng : number
+	agencyId : string
+	agencyOrderType?: number
+	masterId : string
+	orderReceivingId : string
+	images : string[]
+	feedbackImages : string[]
+	serverStatus ?: string
+	isTransferPending ?: boolean
+	transferReason ?: string
+}
+
+/**
+ * 联调角色说明：
+ * 1. USER_PROVIDER_123: 既是服务商(11, 12号单)，也是师傅(13号单接单人)
+ * 2. USER_MASTER_456: 11号单的接单师傅
+ */
+export const currentUserId = ref((uni.getStorageSync('master_user_id') as string) || '')
+
+export const globalOrders = reactive<MyOrder[]>([
+	{
+		id: '1',
+		orderNo: 'RO202602050001',
+		createTime: Date.now(),
+		serviceType: '搭电',
+		remark: '车辆无法启动，位于地库 B2',
+		plateNo: '粤B12345',
+		customerPhone: '13800138000',
+		customerName: '张先生',
+		address: '深圳市南山区科技园北区',
+		lat: 22.53332,
+		lng: 113.93041,
+		orderPrice: 120,
+		status: 'new',
+		dispatchStatus: 'none',
+		dispatchToName: '',
+		agencyId: 'SYSTEM_ADMIN',
+		masterId: '',
+		orderReceivingId: '',
+		images: [],
+		feedbackImages: []
+	},
+	{
+		id: '2',
+		orderNo: 'RO202602050002',
+		createTime: Date.now() - 15 * 60 * 1000,
+		serviceType: '换胎',
+		remark: '右前轮爆胎，需自带工具',
+		plateNo: '粤B54321',
+		customerPhone: '13900139000',
+		customerName: '李女士',
+		address: '深圳市福田区会展中心 3 号门',
+		lat: 22.54053,
+		lng: 114.05956,
+		orderPrice: 150,
+		status: 'new',
+		dispatchStatus: 'none',
+		dispatchToName: '',
+		agencyId: 'SYSTEM_ADMIN',
+		masterId: '',
+		orderReceivingId: '',
+		images: [],
+		feedbackImages: []
+	},
+	{
+		id: '3',
+		orderNo: 'RO202602050003',
+		createTime: Date.now() - 30 * 60 * 1000,
+		serviceType: '新能源紧急充电',
+		remark: '电量剩余 1%，急需补能',
+		plateNo: '粤B88888',
+		customerPhone: '13700137000',
+		customerName: '陈先生',
+		address: '罗湖区深南东路 5002 号',
+		lat: 22.547,
+		lng: 114.117,
+		orderPrice: 200,
+		status: 'new',
+		dispatchStatus: 'none',
+		dispatchToName: '',
+		agencyId: 'SYSTEM_ADMIN',
+		masterId: '',
+		orderReceivingId: '',
+		images: [],
+		feedbackImages: []
+	},
+	{
+		id: '11',
+		orderNo: 'RO202602040011',
+		createTime: Date.now() - 3 * 60 * 60 * 1000,
+		serviceType: '道路救援-拖车',
+		plateNo: '粤B88888',
+		status: 'processing',
+		dispatchStatus: 'dispatched',
+		dispatchToName: '张师傅',
+		orderPrice: 368,
+		remark: '车胎爆了，需要拖车',
+		customerPhone: '13800138000',
+		customerName: '王先生',
+		address: '深圳市南山区腾讯大厦',
+		lat: 22.54051,
+		lng: 113.93449,
+		agencyId: 'USER_PROVIDER_123',
+		masterId: 'USER_MASTER_456',
+		orderReceivingId: '',
+		images: [],
+		feedbackImages: []
+	},
+	{
+		id: '12',
+		orderNo: 'RO202602030012',
+		createTime: Date.now() - 26 * 60 * 60 * 1000,
+		serviceType: '道路救援-搭电',
+		plateNo: '粤B66666',
+		status: 'done',
+		dispatchStatus: 'none',
+		dispatchToName: '',
+		orderPrice: 128,
+		remark: '无法启动',
+		customerPhone: '13900139000',
+		customerName: '李女士',
+		address: '深圳市宝安区壹方城',
+		lat: 22.55321,
+		lng: 113.88707,
+		agencyId: 'USER_PROVIDER_123',
+		masterId: '',
+		orderReceivingId: '',
+		images: [],
+		feedbackImages: []
+	},
+	{
+		id: '13',
+		orderNo: 'RO202602050013',
+		createTime: Date.now() - 10 * 60 * 1000,
+		serviceType: '道路救援-补胎',
+		plateNo: '粤B77777',
+		status: 'processing',
+		dispatchStatus: 'none',
+		dispatchToName: '',
+		orderPrice: 88,
+		remark: '扎钉子了',
+		customerPhone: '13700137000',
+		customerName: '陈先生',
+		address: '深圳市福田区平安金融中心',
+		lat: 22.53307,
+		lng: 114.05454,
+		agencyId: 'OTHER_PROVIDER',
+		masterId: 'USER_PROVIDER_123', // 当前用户作为师傅接的单
+		orderReceivingId: '',
+		images: [],
+		feedbackImages: []
+	}
+])

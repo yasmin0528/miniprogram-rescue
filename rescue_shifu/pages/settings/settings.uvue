@@ -1,0 +1,101 @@
+<template>
+	<view class="page">
+		<view class="header">
+			<text class="title">设置</text>
+		</view>
+
+		<view class="content">
+			<view class="section">
+				<text class="section-title">《用户服务协议》</text>
+				<text class="section-content">
+					欢迎使用我们的救援师傅应用！本协议是您与我们之间关于使用本应用服务的法律协议。请您仔细阅读并充分理解本协议的全部内容。
+
+					1. 服务内容：我们提供救援师傅接单服务，帮助用户快速找到救援师傅。
+
+					2. 用户义务：您承诺提供真实准确的信息，不得利用本服务从事违法活动。
+
+					3. 信息收集：我们将收集您的手机号，用于登录和接单服务。收集方式：通过微信小程序授权获取。使用目的：验证用户身份、提供接单服务。不用于其他商业用途。
+
+					4. 服务变更：我们有权随时修改或终止服务，届时将提前通知用户。
+
+					5. 免责声明：我们不对因不可抗力导致的服务中断承担责任。
+
+					6. 法律适用：本协议受中华人民共和国法律管辖。
+
+					如果您不同意本协议，请停止使用我们的服务。
+				</text>
+			</view>
+
+			<view class="section">
+				<text class="section-title">《隐私政策》</text>
+				<text class="section-content">
+					我们非常重视您的隐私保护。本隐私政策说明了我们如何收集、使用和保护您的个人信息。
+
+					1. 收集的信息：我们仅收集必要的用户信息，包括手机号，用于提供服务。
+
+					2. 信息使用：您的信息仅用于验证身份、提供接单服务和改善用户体验。我们不会向第三方出售或泄露您的信息。
+
+					3. 信息存储：信息存储在安全的服务器上，采用加密技术保护。
+
+					4. 用户权利：您有权访问、修改或删除您的个人信息。如有疑问，请联系我们。
+
+					5. 信息安全：我们采取合理措施防止信息泄露、丢失或滥用。
+
+					6. 政策更新：我们可能会更新本政策，更新后将在应用内通知。
+
+					如果您有任何隐私相关问题，请随时联系我们。
+				</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup>
+// 设置页面，无需额外逻辑
+</script>
+
+<style>
+.page {
+	padding: 40rpx;
+	background-color: #F5F7FA;
+	min-height: 100vh;
+}
+
+.header {
+	text-align: center;
+	margin-bottom: 40rpx;
+}
+
+.title {
+	font-size: 36rpx;
+	font-weight: 600;
+	color: #1D1D1F;
+}
+
+.content {
+	background: #FFFFFF;
+	border-radius: 24rpx;
+	padding: 40rpx;
+	box-shadow: 0 8rpx 32rpx rgba(0, 127, 255, 0.05);
+	border: 1rpx solid #E1E8ED;
+}
+
+.section {
+	margin-bottom: 40rpx;
+}
+
+.section-title {
+	font-size: 32rpx;
+	font-weight: 600;
+	color: #1D1D1F;
+	margin-bottom: 20rpx;
+	display: block;
+}
+
+.section-content {
+	font-size: 26rpx;
+	color: #8E8E93;
+	line-height: 1.6;
+	display: block;
+}
+</style>

@@ -1,0 +1,40 @@
+@import "../../uvue.wxss";
+:host{display:flex;flex-direction:column}
+
+.page {
+	padding: 40rpx;
+	background-color: #F5F7FA;
+	min-height: 100vh;
+}
+.header {
+	text-align: center;
+	margin-bottom: 40rpx;
+}
+.title {
+	font-size: 36rpx;
+	font-weight: 600;
+	color: #1D1D1F;
+}
+.content {
+	background: #FFFFFF;
+	border-radius: 24rpx;
+	padding: 40rpx;
+	box-shadow: 0 8rpx 32rpx rgba(0, 127, 255, 0.05);
+	border: 1rpx solid #E1E8ED;
+}
+.section {
+	margin-bottom: 40rpx;
+}
+.section-title {
+	font-size: 32rpx;
+	font-weight: 600;
+	color: #1D1D1F;
+	margin-bottom: 20rpx;
+	display: block;
+}
+.section-content {
+	font-size: 26rpx;
+	color: #8E8E93;
+	line-height: 1.6;
+	display: block;
+}

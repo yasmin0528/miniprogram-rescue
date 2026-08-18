@@ -1,0 +1,48 @@
+package com.tongyi.rescue_api.common.utils.wx;
+
+
+import jakarta.servlet.http.HttpServletRequest;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+
+public class HttpClientUtils {
+
+    private static AbstractHttpDelegate delegate = new DefaultHttpKit();
+
+    public static AbstractHttpDelegate getDelegate() {
+        return delegate;
+    }
+
+    public static void setDelegate(AbstractHttpDelegate delegate) {
+        HttpClientUtils.delegate = delegate;
+    }
+
+    public static String readData(HttpServletRequest request) {
+        BufferedReader br = null;
+        try {
+            StringBuilder result = new StringBuilder();
+            br = request.getReader();
+            for (String line; (line = br.readLine()) != null; ) {
+                if (result.length() > 0) {
+                    result.append("\n");
+                }
+                result.append(line);
+            }
+            return result.toString();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } finally {
+            if (br != null) {
+                try {
+                    br.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+}
+
+class DefaultHttpKit extends AbstractHttpDelegate {
+}

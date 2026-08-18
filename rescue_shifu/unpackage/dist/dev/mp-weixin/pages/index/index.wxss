@@ -1,0 +1,163 @@
+@import "../../uvue.wxss";
+:host{display:flex;flex-direction:column}
+
+/* 基础背景与布局 */
+.page {
+	padding: 32rpx;
+	background-color: #F5F7FA;
+	min-height: 100vh;
+}
+.header {
+	margin-bottom: 40rpx;
+	padding-top: 20rpx;
+}
+.page-title {
+	font-size: 48rpx;
+	font-weight: 600;
+	color: #1D1D1F;
+	letter-spacing: -0.5px;
+}
+
+/* 卡片样式 */
+.card {
+	background: #FFFFFF;
+	border-radius: 12rpx;
+	margin-bottom: 32rpx;
+	overflow: hidden;
+	border: 1rpx solid #E1E8ED;
+	box-shadow: 0 4rpx 16rpx rgba(0, 127, 255, 0.05);
+}
+.card-top {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	padding: 32rpx;
+	border-bottom: 1rpx solid #F0F5F9;
+}
+.time-box {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+.time-text {
+	font-size: 28rpx;
+	color: #86868B;
+	font-weight: 400;
+}
+.price {
+	font-size: 40rpx;
+	color: #fb5607;
+	font-weight: 700;
+}
+
+/* 内容区域 */
+.card-content {
+	display: flex;
+	flex-direction: row;
+	padding: 32rpx;
+	position: relative;
+}
+.content-left {
+	flex: 1;
+}
+.content-row {
+	display: flex;
+	flex-direction: row;
+	margin-bottom: 20rpx;
+}
+.row-label {
+	font-size: 28rpx;
+	color: #86868B;
+	width: 160rpx;
+}
+.row-value {
+	font-size: 28rpx;
+	color: #1D1D1F;
+	flex: 1;
+	line-height: 1.5;
+}
+.highlight {
+	color: #007fff;
+	text-decoration: none;
+	font-weight: 600;
+}
+.highlight:active {
+	opacity: 0.6;
+}
+.content-right {
+	position: absolute;
+	right: 32rpx;
+	top: 32rpx;
+}
+
+/* 标签颜色 - 重点突出 */
+.status-tag {
+	padding: 8rpx 20rpx;
+	border-radius: 4rpx;
+	font-size: 22rpx;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+.tag-electricity {
+	background-color: #EBF3FF;
+	color: #007fff;
+}
+.tag-tire {
+	background-color: #FFF9E6;
+	color: #ffbe0b;
+}
+.tag-ev {
+	background-color: #FFF2ED;
+	color: #fb5607;
+}
+.tag-default {
+	background-color: #F5F7FA;
+	color: #86868B;
+}
+
+/* 底部操作 */
+.card-footer {
+	padding: 0 32rpx 32rpx;
+	display: flex;
+	flex-direction: row;
+	justify-content: flex-end;
+}
+.footer-actions {
+	display: flex;
+	flex-direction: row;
+	gap: 24rpx;
+}
+.btn-primary {
+	height: 72rpx;
+	line-height: 72rpx;
+	padding: 0 48rpx;
+	background-color: #007fff;
+	color: #FFFFFF;
+	border-radius: 8rpx;
+	font-size: 26rpx;
+	font-weight: 600;
+	border: none;
+	margin: 0;
+	box-shadow: 0 4rpx 12rpx rgba(0, 127, 255, 0.2);
+}
+.btn-secondary {
+	height: 72rpx;
+	line-height: 72rpx;
+	padding: 0 48rpx;
+	background-color: #FFFFFF;
+	color: #007fff;
+	border-radius: 8rpx;
+	font-size: 26rpx;
+	font-weight: 500;
+	border: 1rpx solid #007fff;
+	margin: 0;
+}
+.btn-primary:active {
+	background-color: #0066CC;
+}
+.btn-secondary:active {
+	background-color: #F0F7FF;
+}
+
